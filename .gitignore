@@ -11,4 +11,4 @@ deps/
 nim.cfg
 nimble.develop
 nimble.paths
-tests/output/
+tests/outputs
