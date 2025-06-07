@@ -18,6 +18,7 @@ when not compiles(vcvtq_u32_f32(float32x4(0.0))):
 proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for rounded box
   ## Processes 4 pixels at once
+  echo "sdRoundedBoxSimd"
   
   let
     zero = vmovq_n_f32(0.0)

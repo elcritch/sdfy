@@ -3,6 +3,7 @@ import std/math, std/monotimes, std/times
 import pixie
 
 import sdfy
+import sdfy/roundedbox
 
 template timeIt(name: string, body: untyped) =
   let start = getMonoTime()

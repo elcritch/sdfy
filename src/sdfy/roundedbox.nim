@@ -2,7 +2,9 @@ import std/math, std/monotimes, std/times
 import pixie, vmath, pixie/simd
 
 import ./sdfytypes
-import ./simd/roundedbox
+import ./simd/roundedboxSimd
+
+export roundedboxSimd
 
 proc invert*(image: Image) {.hasSimd, raises: [].} =
   ## Inverts all of the colors and alpha.
