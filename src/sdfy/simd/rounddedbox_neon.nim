@@ -1,8 +1,9 @@
 import std/math
-import pixie, vmath, chroma
+import vmath, chroma
+
 import nimsimd/hassimd, nimsimd/neon
 
-import ../sdftypes
+import ../sdfytypes
 
 when defined(release):
   {.push checks: off.}

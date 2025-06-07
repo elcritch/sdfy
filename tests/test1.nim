@@ -1,5 +1,6 @@
 import std/math, std/monotimes, std/times
-import pixie, vmath, pixie/simd
+
+import pixie
 
 import sdfsy
 
