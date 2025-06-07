@@ -22,7 +22,16 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 - **Feather Gaussian**: Gaussian-based anti-aliasing for smooth edges  
 - **Drop Shadow**: Gaussian-based drop shadow effects
 
-## Visual Examples
+## Examples
+
+Benchmarks:
+
+- pixie shadow: 434 ms
+- sdf clip: 4 ms
+- sdf feather: 6 ms
+- sdf featherInv: 6 ms
+- sdf featherGaussian: 7 ms
+- sdf dropShadow: 7 ms
 
 Here are examples of the different rendering modes applied to rounded rectangles:
 
