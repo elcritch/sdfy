@@ -13,12 +13,12 @@ template timeIt(name: string, body: untyped) =
 
 
 proc main() =
-  let image = newImage(300, 300)
-  let center = vec2(150.0, 150.0)
+  let image = newImage(20, 20)
+  let center = vec2(image.width / 2, image.height / 2)
   let pos = rgba(255, 0, 0, 255)
   let neg = rgba(0, 0, 255, 255)
-  let corners = vec4(0.0, 20.0, 40.0, 80.0)
-  let wh = vec2(200.0, 200.0)
+  let corners = vec4(0.0, 2.0, 4.0, 8.0)
+  let wh = vec2(16.0, 16.0)
 
   timeIt "base":
     let rect = newImage(300, 300)
@@ -44,55 +44,55 @@ proc main() =
                     r = corners,
                     pos = pos,
                     neg = neg,
-                    mode = sdfModeClip)
+                    mode = sdfModeClipAliased)
 
   image.writeFile("tests/outputs/rounded_box_clip.png")
 
-  timeIt "feather":
-    signedRoundedBox(image,
-                    center = center,
-                    wh = wh,
-                    r = corners,
-                    pos = pos,
-                    neg = neg,
-                    mode = sdfModeFeather)
+  # timeIt "feather":
+  #   signedRoundedBox(image,
+  #                   center = center,
+  #                   wh = wh,
+  #                   r = corners,
+  #                   pos = pos,
+  #                   neg = neg,
+  #                   mode = sdfModeFeather)
 
-  image.writeFile("tests/outputs/rounded_box_feather.png")
+  # image.writeFile("tests/outputs/rounded_box_feather.png")
 
-  timeIt "featherInv":
-    signedRoundedBox(image,
-                    center = center,
-                    wh = wh,
-                    r = corners,
-                    pos = pos,
-                    neg = neg,
-                    mode = sdfModeFeatherInv)
+  # timeIt "featherInv":
+  #   signedRoundedBox(image,
+  #                   center = center,
+  #                   wh = wh,
+  #                   r = corners,
+  #                   pos = pos,
+  #                   neg = neg,
+  #                   mode = sdfModeFeatherInv)
 
-  image.writeFile("tests/outputs/rounded_box_feather_inv.png")
+  # image.writeFile("tests/outputs/rounded_box_feather_inv.png")
 
-  timeIt "featherGaussian":
-    signedRoundedBox(image,
-                    center = center,
-                    wh = wh,
-                    r = corners,
-                    pos = pos,
-                    neg = neg,
-                    mode = sdfModeFeatherGaussian)
+  # timeIt "featherGaussian":
+  #   signedRoundedBox(image,
+  #                   center = center,
+  #                   wh = wh,
+  #                   r = corners,
+  #                   pos = pos,
+  #                   neg = neg,
+  #                   mode = sdfModeFeatherGaussian)
 
-  image.writeFile("tests/outputs/rounded_box_feather_gaussian.png")
+  # image.writeFile("tests/outputs/rounded_box_feather_gaussian.png")
 
-  timeIt "dropShadow":
-    signedRoundedBox(image,
-                    center = center,
-                    wh = wh,
-                    r = corners,
-                    pos = pos,
-                    neg = pos,
-                    factor = 10,
-                    spread = 20.0,
-                    mode = sdfModeDropShadow)
+  # timeIt "dropShadow":
+  #   signedRoundedBox(image,
+  #                   center = center,
+  #                   wh = wh,
+  #                   r = corners,
+  #                   pos = pos,
+  #                   neg = pos,
+  #                   factor = 10,
+  #                   spread = 20.0,
+  #                   mode = sdfModeDropShadow)
 
-  image.writeFile("tests/outputs/rounded_box_drop_shadow.png")
+  # image.writeFile("tests/outputs/rounded_box_drop_shadow.png")
 
-for i in 0 ..< 3:
+for i in 0 ..< 1:
   main()

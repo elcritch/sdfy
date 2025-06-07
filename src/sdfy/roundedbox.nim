@@ -43,13 +43,21 @@ proc signedRoundedBox*[I](
     b = wh / 2.0
 
   for y in 0 ..< image.height:
+    echo ""
     for x in 0 ..< image.width:
       let p = vec2(x.float32, y.float32) - center
       let sd = sdRoundedBox(p, b, r)
+
+
       var c: ColorRGBA = if sd < 0.0: pos else: neg
       case mode:
       of sdfModeClip:
         discard
+      of sdfModeClipAliased:
+        let cl = clamp(sd + 0.5, 0.0, 1.0)
+        let mx = mix(pos, neg, cl)
+        echo "x:\t", x, "\ty:\t", y, "\tsd:\t", sd.round(2), "\tclamp:\t", cl.round(2), "\tmix:\t", mx
+        c = mx
       of sdfModeFeather:
         c.a = uint8(max(0.0, min(255, (factor*sd) + 127)))
       of sdfModeFeatherInv:
