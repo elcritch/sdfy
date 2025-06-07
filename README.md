@@ -33,6 +33,8 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 | SDF Feather Gaussian | 7 ms | 22 ms |
 | SDF Drop Shadow | 7 ms | 22 ms |
 
+Note: Pixie's Gaussian Blurs and Shadow don't appear to be SIMD accelerated as of v5.0.7.
+
 Here are examples of the different rendering modes applied to rounded rectangles:
 
 ### Clip Mode (Sharp Edges)
