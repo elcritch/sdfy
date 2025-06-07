@@ -13,12 +13,12 @@ template timeIt(name: string, body: untyped) =
 
 
 proc main() =
-  let image = newImage(20, 20)
+  let image = newImage(300, 300)
   let center = vec2(image.width / 2, image.height / 2)
   let pos = rgba(255, 0, 0, 255)
   let neg = rgba(0, 0, 255, 255)
-  let corners = vec4(0.0, 2.0, 4.0, 8.0)
-  let wh = vec2(16.0, 16.0)
+  let corners = vec4(0.0, 20.0, 40.0, 80.0)
+  let wh = vec2(200.0, 200.0)
 
   timeIt "base":
     let rect = newImage(300, 300)
@@ -44,9 +44,20 @@ proc main() =
                     r = corners,
                     pos = pos,
                     neg = neg,
-                    mode = sdfModeClipAliased)
+                    mode = sdfModeClip)
 
   image.writeFile("tests/outputs/rounded_box_clip.png")
+
+  timeIt "clipAliased":
+    signedRoundedBox(image,
+                    center = center,
+                    wh = wh,
+                    r = corners,
+                    pos = pos,
+                    neg = neg,
+                    mode = sdfModeClipAliased)
+
+  image.writeFile("tests/outputs/rounded_box_clip_aliased.png")
 
   # timeIt "feather":
   #   signedRoundedBox(image,

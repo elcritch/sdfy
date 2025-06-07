@@ -54,10 +54,11 @@ proc signedRoundedBox*[I](
       of sdfModeClip:
         discard
       of sdfModeClipAliased:
+        # we offset by 0.5 to make the edges blur
+        # the clamping makes the transition go by ~1 pixel
+        # then we mix the pos and neg colors based on the clamped value
         let cl = clamp(sd + 0.5, 0.0, 1.0)
-        let mx = mix(pos, neg, cl)
-        echo "x:\t", x, "\ty:\t", y, "\tsd:\t", sd.round(2), "\tclamp:\t", cl.round(2), "\tmix:\t", mx
-        c = mx
+        c = mix(pos, neg, cl)
       of sdfModeFeather:
         c.a = uint8(max(0.0, min(255, (factor*sd) + 127)))
       of sdfModeFeatherInv:
@@ -68,9 +69,7 @@ proc signedRoundedBox*[I](
         let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
         c.a = uint8(f * 255)
       of sdfModeDropShadow:
-        # let sd = sd / factor - spread / 2
         let s = 2.2
-        # let sd = sd - factor/4
         let sd = sd / factor * s - spread / 8.8
         let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
         c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: 255
