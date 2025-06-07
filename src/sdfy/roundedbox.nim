@@ -23,6 +23,27 @@ proc sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   
   result = min(max(q.x, q.y), 0.0) + length(max(q, vec2(0.0, 0.0))) - cornerRadius.x
 
+proc sdChamferBox*(p: Vec2, b: Vec2, chamfer: float32): float32 {.inline.} =
+  ## Signed distance function for a chamfered box
+  ## p: point to test
+  ## b: box half-extents (width/2, height/2)
+  ## chamfer: chamfer amount
+  ## Returns: signed distance (negative inside, positive outside)
+  var p = abs(p) - b
+  
+  # Swap coordinates if needed to put largest coordinate in x
+  p = if p.y > p.x: vec2(p.y, p.x) else: vec2(p.x, p.y)
+  p.y += chamfer
+  
+  let k = 1.0 - sqrt(2.0)
+  if p.y < 0.0 and p.y + p.x * k < 0.0:
+    return p.x
+  
+  if p.x < p.y:
+    return (p.x + p.y) * sqrt(0.5)
+  
+  return length(p)
+
 proc signedRoundedBox*[I](
     image: I,
     center: Vec2,
