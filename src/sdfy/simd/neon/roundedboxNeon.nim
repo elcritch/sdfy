@@ -1,5 +1,5 @@
 import std/math
-import vmath, chroma
+import vmath, chroma, pixie
 import nimsimd/hassimd, nimsimd/neon
 
 import ../../sdfytypes
@@ -140,6 +140,31 @@ proc signedRoundedBoxNeon*[I](
             idx = row_start + x + i
           
           image.data[idx] = final_color
+
+      of sdfModeClipAntiAlias:
+        # Anti-aliased clip mode: mix colors based on clamped (sd + 0.5)
+        # cl = clamp(sd + 0.5, 0.0, 1.0)
+        # c = mix(pos, neg, cl)
+        let
+          half_vec = vmovq_n_f32(0.5)
+          one_vec = vmovq_n_f32(1.0)
+          offset_sd = vaddq_f32(sd_vec, half_vec)
+          clamped_low = vmaxq_f32(offset_sd, zero_vec)
+          clamped = vminq_f32(clamped_low, one_vec)
+        
+        # Extract clamped values for color mixing
+        var clamped_array: array[4, float32]
+        vst1q_f32(clamped_array[0].addr, clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = clamped_array[i]
+            # mix(pos, neg, cl) = pos * (1 - cl) + neg * cl
+            mixed_color = mix(pos_rgbx, neg_rgbx, cl)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color
 
       of sdfModeFeather:
         # Feathered mode: calculate alpha values using SIMD
