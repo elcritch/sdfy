@@ -108,17 +108,3 @@ proc signedBox*[I, T](
         c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: 255
       let idx = image.dataIndex(x, y)
       image.data[idx] = c.rgbx()
-
-proc signedRoundedBox*[I](
-    image: I,
-    center: Vec2,
-    wh: Vec2,
-    r: Vec4,
-    pos: ColorRGBA,
-    neg: ColorRGBA,
-    factor: float32 = 4,
-    spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeatherInv
-) {.hasSimd, raises: [].} =
-  ## Legacy function for rounded box - calls the generic version
-  signedBox(image, center, wh, RoundedBoxParams(r: r), pos, neg, factor, spread, mode)
