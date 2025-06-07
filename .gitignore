@@ -1,6 +1,7 @@
 *
 !*.*
 !*/
+*.out
 *.dll
 *.exe
 *.kate-swap

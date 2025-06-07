@@ -33,7 +33,7 @@ proc main() =
     image.draw(shadow)
     image.draw(rect)
 
-  image.writeFile("tests/outputs/rounded_box_base.png")
+  image.writeFile("tests/outputs/rounded_box_pixie.png")
 
   timeIt "clip":
     signedRoundedBox(image,

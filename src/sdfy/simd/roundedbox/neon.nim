@@ -3,7 +3,7 @@ import vmath, chroma
 
 import nimsimd/hassimd, nimsimd/neon
 
-import ../sdfytypes
+import ../../sdfytypes
 
 when defined(release):
   {.push checks: off.}
