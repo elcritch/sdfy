@@ -44,29 +44,43 @@ func sdChamferBox*(p: Vec2, b: Vec2, chamfer: float32): float32 {.inline.} =
   
   return length(p)
 
-proc signedRoundedBox*[I](
+type
+  RoundedBoxParams* = object
+    ## Parameters for rounded box SDF
+    r*: Vec4  ## corner radii as Vec4 (x=top-right, y=bottom-right, z=bottom-left, w=top-left)
+  
+  ChamferBoxParams* = object
+    ## Parameters for chamfer box SDF
+    chamfer*: float32  ## chamfer amount
+
+proc signedBox*[I, T](
     image: I,
     center: Vec2,
     wh: Vec2,
-    r: Vec4,
+    params: T,
     pos: ColorRGBA,
     neg: ColorRGBA,
     factor: float32 = 4,
     spread: float32 = 0.0,
     mode: SDFMode = sdfModeFeatherInv
 ) {.hasSimd, raises: [].} =
-  ## Signed distance function for a rounded box
-  ## p: point to test
-  ## b: box half-extents (width/2, height/2)
-  ## r: corner radii as Vec4 (x=top-right, y=bottom-right, z=bottom-left, w=top-left)
-  ## Returns: signed distance (negative inside, positive outside)
+  ## Generic signed distance function for boxes
+  ## Supports both rounded and chamfered boxes based on params type
+  ## T: RoundedBoxParams or ChamferBoxParams
   let
     b = wh / 2.0
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let p = vec2(x.float32, y.float32) - center
-      let sd = sdRoundedBox(p, b, r)
+      
+      # Select the appropriate SDF function based on parameter type
+      let sd = when T is RoundedBoxParams:
+        sdRoundedBox(p, b, params.r)
+      elif T is ChamferBoxParams:
+        sdChamferBox(p, b, params.chamfer)
+      else:
+        {.error: "Unsupported box parameter type".}
 
       var c: ColorRGBA = if sd < 0.0: pos else: neg
       case mode:
@@ -94,3 +108,17 @@ proc signedRoundedBox*[I](
         c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: 255
       let idx = image.dataIndex(x, y)
       image.data[idx] = c.rgbx()
+
+proc signedRoundedBox*[I](
+    image: I,
+    center: Vec2,
+    wh: Vec2,
+    r: Vec4,
+    pos: ColorRGBA,
+    neg: ColorRGBA,
+    factor: float32 = 4,
+    spread: float32 = 0.0,
+    mode: SDFMode = sdfModeFeatherInv
+) {.hasSimd, raises: [].} =
+  ## Legacy function for rounded box - calls the generic version
+  signedBox(image, center, wh, RoundedBoxParams(r: r), pos, neg, factor, spread, mode)

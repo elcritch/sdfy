@@ -37,71 +37,93 @@ proc main() =
 
   image.writeFile("tests/outputs/rounded_box_pixie.png")
 
-  timeIt "clip":
-    signedRoundedBox(image,
-                    center = center,
-                    wh = wh,
-                    r = corners,
-                    pos = pos,
-                    neg = neg,
-                    mode = sdfModeClip)
+  timeIt "clip - rounded":
+    signedBox(image,
+              center = center,
+              wh = wh,
+              params = RoundedBoxParams(r: corners),
+              pos = pos,
+              neg = neg,
+              mode = sdfModeClip)
 
   image.writeFile("tests/outputs/rounded_box_clip.png")
 
-  timeIt "clipAliased":
-    signedRoundedBox(image,
-                    center = center,
-                    wh = wh,
-                    r = corners,
-                    pos = pos,
-                    neg = neg,
-                    mode = sdfModeClipAntiAlias)
+  timeIt "clipAliased - rounded":
+    signedBox(image,
+              center = center,
+              wh = wh,
+              params = RoundedBoxParams(r: corners),
+              pos = pos,
+              neg = neg,
+              mode = sdfModeClipAntiAlias)
 
   image.writeFile("tests/outputs/rounded_box_clip_aliased.png")
 
+  timeIt "clip - chamfer":
+    signedBox(image,
+              center = center,
+              wh = wh,
+              params = ChamferBoxParams(chamfer: 20.0),
+              pos = pos,
+              neg = neg,
+              mode = sdfModeClip)
+
+  image.writeFile("tests/outputs/chamfer_box_clip.png")
+
+  timeIt "clipAliased - chamfer":
+    signedBox(image,
+              center = center,
+              wh = wh,
+              params = ChamferBoxParams(chamfer: 20.0),
+              pos = pos,
+              neg = neg,
+              mode = sdfModeClipAntiAlias)
+
+  image.writeFile("tests/outputs/chamfer_box_clip_aliased.png")
+
   # timeIt "feather":
-  #   signedRoundedBox(image,
-  #                   center = center,
-  #                   wh = wh,
-  #                   r = corners,
-  #                   pos = pos,
-  #                   neg = neg,
-  #                   mode = sdfModeFeather)
+  #   signedBox(image,
+  #             center = center,
+  #             wh = wh,
+  #             params = RoundedBoxParams(r: corners),
+  #             pos = pos,
+  #             neg = neg,
+  #             mode = sdfModeFeather)
 
   # image.writeFile("tests/outputs/rounded_box_feather.png")
 
   # timeIt "featherInv":
-  #   signedRoundedBox(image,
-  #                   center = center,
-  #                   wh = wh,
-  #                   r = corners,
-  #                   pos = pos,
-  #                   neg = neg,
-  #                   mode = sdfModeFeatherInv)
+  #   signedBox(image,
+  #             center = center,
+  #             wh = wh,
+  #             params = RoundedBoxParams(r: corners),
+  #             pos = pos,
+  #             neg = neg,
+  #             mode = sdfModeFeatherInv)
 
   # image.writeFile("tests/outputs/rounded_box_feather_inv.png")
 
   # timeIt "featherGaussian":
-  #   signedRoundedBox(image,
-  #                   center = center,
-  #                   wh = wh,
-  #                   r = corners,
-  #                   pos = pos,
-  #                   neg = neg,
-  #                   mode = sdfModeFeatherGaussian)
+  #   signedBox(image,
+  #             center = center,
+  #             wh = wh,
+  #             params = RoundedBoxParams(r: corners),
+  #             pos = pos,
+  #             neg = neg,
+  #             mode = sdfModeFeatherGaussian)
 
   # image.writeFile("tests/outputs/rounded_box_feather_gaussian.png")
 
   # timeIt "dropShadow":
-  #   signedRoundedBox(image,
-  #                   center = center,
-  #                   wh = wh,
-  #                   r = corners,
-  #                   pos = pos,
-  #                   neg = pos,
-  #                   factor = 10,
-  #                   spread = 20.0,
-  #                   mode = sdfModeDropShadow)
+  #   signedBox(image,
+  #             center = center,
+  #             wh = wh,
+  #             params = RoundedBoxParams(r: corners),
+  #             pos = pos,
+  #             neg = pos,
+  #             factor = 10,
+  #             spread = 20.0,
+  #             mode = sdfModeDropShadow)
 
   # image.writeFile("tests/outputs/rounded_box_drop_shadow.png")
 
