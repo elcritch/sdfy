@@ -33,7 +33,7 @@ proc main() =
     image.draw(shadow)
     image.draw(rect)
 
-  image.writeFile("tests/output/rounded_box_base.png")
+  image.writeFile("tests/outputs/rounded_box_base.png")
 
   timeIt "clip":
     signedRoundedBox(image,
@@ -44,7 +44,7 @@ proc main() =
                     neg = neg,
                     mode = sdfModeClip)
 
-  image.writeFile("tests/output/rounded_box.png")
+  image.writeFile("tests/outputs/rounded_box.png")
 
   timeIt "feather":
     signedRoundedBox(image,
@@ -55,7 +55,7 @@ proc main() =
                     neg = neg,
                     mode = sdfModeFeather)
 
-  image.writeFile("tests/output/rounded_box_feather.png")
+  image.writeFile("tests/outputs/rounded_box_feather.png")
 
   timeIt "featherInv":
     signedRoundedBox(image,
@@ -66,7 +66,7 @@ proc main() =
                     neg = neg,
                     mode = sdfModeFeatherInv)
 
-  image.writeFile("tests/output/rounded_box_feather_inv.png")
+  image.writeFile("tests/outputs/rounded_box_feather_inv.png")
 
   timeIt "featherGaussian":
     signedRoundedBox(image,
@@ -77,7 +77,7 @@ proc main() =
                     neg = neg,
                     mode = sdfModeFeatherGaussian)
 
-  image.writeFile("tests/output/rounded_box_feather_gaussian.png")
+  image.writeFile("tests/outputs/rounded_box_feather_gaussian.png")
 
   timeIt "dropShadow":
     signedRoundedBox(image,
@@ -90,7 +90,7 @@ proc main() =
                     spread = 20.0,
                     mode = sdfModeDropShadow)
 
-  image.writeFile("tests/output/rounded_box_drop_shadow.png")
+  image.writeFile("tests/outputs/rounded_box_drop_shadow.png")
 
 for i in 0 ..< 3:
   main()
