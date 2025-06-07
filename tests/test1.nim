@@ -46,7 +46,7 @@ proc main() =
                     neg = neg,
                     mode = sdfModeClip)
 
-  image.writeFile("tests/outputs/rounded_box.png")
+  image.writeFile("tests/outputs/rounded_box_clip.png")
 
   timeIt "feather":
     signedRoundedBox(image,
