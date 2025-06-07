@@ -6,16 +6,6 @@ import ./simd/roundedboxSimd
 
 export roundedboxSimd
 
-proc invert*(image: Image) {.hasSimd, raises: [].} =
-  ## Inverts all of the colors and alpha.
-  for i in 0 ..< image.data.len:
-    var rgbx = image.data[i]
-    rgbx.r = 255 - rgbx.r
-    rgbx.g = 255 - rgbx.g
-    rgbx.b = 255 - rgbx.b
-    rgbx.a = 255 - rgbx.a
-    image.data[i] = rgbx
-
 proc sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   ## Signed distance function for a rounded box
   ## p: point to test
@@ -33,8 +23,8 @@ proc sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   
   result = min(max(q.x, q.y), 0.0) + length(max(q, vec2(0.0, 0.0))) - cornerRadius.x
 
-proc signedRoundedBox*(
-    image: Image,
+proc signedRoundedBox*[I](
+    image: I,
     center: Vec2,
     wh: Vec2,
     r: Vec4,

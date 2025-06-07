@@ -1,6 +1,5 @@
 import std/math
 import vmath, chroma
-
 import nimsimd/hassimd, nimsimd/neon
 
 import ../../sdfytypes
@@ -18,7 +17,6 @@ when not compiles(vcvtq_u32_f32(float32x4(0.0))):
 proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for rounded box
   ## Processes 4 pixels at once
-  echo "sdRoundedBoxSimd"
   
   let
     zero = vmovq_n_f32(0.0)
@@ -78,8 +76,8 @@ proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {
   
   result = vaddq_f32(vsubq_f32(vaddq_f32(min_max_q, length_vec), corner_radius), zero)
 
-proc signedRoundedBoxNeon*(
-    image: SdfImage,
+proc signedRoundedBoxNeon*[I](
+    image: I,
     center: Vec2,
     wh: Vec2,
     r: Vec4,

@@ -31,5 +31,5 @@ proc copy*(image: SdfImage): SdfImage {.raises: [].} =
   result.height = image.height
   result.data = image.data
 
-template dataIndex*(image: SdfImage, x, y: int): int =
+template dataIndex*[I](image: I, x, y: int): int =
   image.width * y + x
