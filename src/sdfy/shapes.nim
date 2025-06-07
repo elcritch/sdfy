@@ -2,9 +2,9 @@ import std/math, std/monotimes, std/times
 import pixie, vmath, pixie/simd
 
 import ./sdfytypes
-import ./simd/roundedboxSimd
+import ./simd/shapesSimd
 
-export roundedboxSimd
+export shapesSimd
 
 type
   RoundedBoxParams* = object
