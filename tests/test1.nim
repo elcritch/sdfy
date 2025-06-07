@@ -81,51 +81,51 @@ proc main() =
 
   image.writeFile("tests/outputs/chamfer_box_clip_aliased.png")
 
-  # timeIt "feather":
-  #   signedBox(image,
-  #             center = center,
-  #             wh = wh,
-  #             params = RoundedBoxParams(r: corners),
-  #             pos = pos,
-  #             neg = neg,
-  #             mode = sdfModeFeather)
+  timeIt "feather":
+    drawSdfShape(image,
+              center = center,
+              wh = wh,
+              params = RoundedBoxParams(r: corners),
+              pos = pos,
+              neg = neg,
+              mode = sdfModeFeather)
 
-  # image.writeFile("tests/outputs/rounded_box_feather.png")
+  image.writeFile("tests/outputs/rounded_box_feather.png")
 
-  # timeIt "featherInv":
-  #   signedBox(image,
-  #             center = center,
-  #             wh = wh,
-  #             params = RoundedBoxParams(r: corners),
-  #             pos = pos,
-  #             neg = neg,
-  #             mode = sdfModeFeatherInv)
+  timeIt "featherInv":
+    drawSdfShape(image,
+              center = center,
+              wh = wh,
+              params = RoundedBoxParams(r: corners),
+              pos = pos,
+              neg = neg,
+              mode = sdfModeFeatherInv)
 
-  # image.writeFile("tests/outputs/rounded_box_feather_inv.png")
+  image.writeFile("tests/outputs/rounded_box_feather_inv.png")
 
-  # timeIt "featherGaussian":
-  #   signedBox(image,
-  #             center = center,
-  #             wh = wh,
-  #             params = RoundedBoxParams(r: corners),
-  #             pos = pos,
-  #             neg = neg,
-  #             mode = sdfModeFeatherGaussian)
+  timeIt "featherGaussian":
+    drawSdfShape(image,
+              center = center,
+              wh = wh,
+              params = RoundedBoxParams(r: corners),
+              pos = pos,
+              neg = neg,
+              mode = sdfModeFeatherGaussian)
 
-  # image.writeFile("tests/outputs/rounded_box_feather_gaussian.png")
+  image.writeFile("tests/outputs/rounded_box_feather_gaussian.png")
 
-  # timeIt "dropShadow":
-  #   signedBox(image,
-  #             center = center,
-  #             wh = wh,
-  #             params = RoundedBoxParams(r: corners),
-  #             pos = pos,
-  #             neg = pos,
-  #             factor = 10,
-  #             spread = 20.0,
-  #             mode = sdfModeDropShadow)
+  timeIt "dropShadow":
+    drawSdfShape(image,
+              center = center,
+              wh = wh,
+              params = RoundedBoxParams(r: corners),
+              pos = pos,
+              neg = pos,
+              factor = 10,
+              spread = 20.0,
+              mode = sdfModeDropShadow)
 
-  # image.writeFile("tests/outputs/rounded_box_drop_shadow.png")
+  image.writeFile("tests/outputs/rounded_box_drop_shadow.png")
 
 for i in 0 ..< 1:
   main()
