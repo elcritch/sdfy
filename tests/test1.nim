@@ -37,95 +37,51 @@ proc main() =
 
   image.writeFile("tests/outputs/rounded_box_pixie.png")
 
-  timeIt "clip - rounded":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = RoundedBoxParams(r: corners),
-              pos = pos,
-              neg = neg,
-              mode = sdfModeClip)
+  # Define test modes
+  let testModes = [
+    (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+    (mode: sdfModeClipAntiAlias, name: "clip_aliased", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+    (mode: sdfModeFeather, name: "feather", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+    (mode: sdfModeFeatherInv, name: "feather_inv", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+    (mode: sdfModeFeatherGaussian, name: "feather_gaussian", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+    (mode: sdfModeDropShadow, name: "drop_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos)
+  ]
 
-  image.writeFile("tests/outputs/rounded_box_clip.png")
+  # Test rounded boxes
+  for testMode in testModes:
+    let testName = "rounded - " & testMode.name
+    let fileName = "tests/outputs/rounded_box_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,
+                  params = RoundedBoxParams(r: corners),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
 
-  timeIt "clipAliased - rounded":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = RoundedBoxParams(r: corners),
-              pos = pos,
-              neg = neg,
-              mode = sdfModeClipAntiAlias)
+    image.writeFile(fileName)
 
-  image.writeFile("tests/outputs/rounded_box_clip_aliased.png")
+  # Test chamfer boxes
+  for testMode in testModes:
+    let testName = "chamfer - " & testMode.name
+    let fileName = "tests/outputs/chamfer_box_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,
+                  params = ChamferBoxParams(chamfer: 20.0),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
 
-  timeIt "clip - chamfer":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = ChamferBoxParams(chamfer: 20.0),
-              pos = pos,
-              neg = neg,
-              mode = sdfModeClip)
-
-  image.writeFile("tests/outputs/chamfer_box_clip.png")
-
-  timeIt "clipAliased - chamfer":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = ChamferBoxParams(chamfer: 20.0),
-              pos = pos,
-              neg = neg,
-              mode = sdfModeClipAntiAlias)
-
-  image.writeFile("tests/outputs/chamfer_box_clip_aliased.png")
-
-  timeIt "feather":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = RoundedBoxParams(r: corners),
-              pos = pos,
-              neg = neg,
-              mode = sdfModeFeather)
-
-  image.writeFile("tests/outputs/rounded_box_feather.png")
-
-  timeIt "featherInv":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = RoundedBoxParams(r: corners),
-              pos = pos,
-              neg = neg,
-              mode = sdfModeFeatherInv)
-
-  image.writeFile("tests/outputs/rounded_box_feather_inv.png")
-
-  timeIt "featherGaussian":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = RoundedBoxParams(r: corners),
-              pos = pos,
-              neg = neg,
-              mode = sdfModeFeatherGaussian)
-
-  image.writeFile("tests/outputs/rounded_box_feather_gaussian.png")
-
-  timeIt "dropShadow":
-    drawSdfShape(image,
-              center = center,
-              wh = wh,
-              params = RoundedBoxParams(r: corners),
-              pos = pos,
-              neg = pos,
-              factor = 10,
-              spread = 20.0,
-              mode = sdfModeDropShadow)
-
-  image.writeFile("tests/outputs/rounded_box_drop_shadow.png")
+    image.writeFile(fileName)
 
 for i in 0 ..< 1:
   main()
