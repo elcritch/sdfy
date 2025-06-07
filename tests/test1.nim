@@ -55,7 +55,7 @@ proc main() =
                     r = corners,
                     pos = pos,
                     neg = neg,
-                    mode = sdfModeClipAliased)
+                    mode = sdfModeClipAntiAlias)
 
   image.writeFile("tests/outputs/rounded_box_clip_aliased.png")
 

@@ -43,17 +43,15 @@ proc signedRoundedBox*[I](
     b = wh / 2.0
 
   for y in 0 ..< image.height:
-    echo ""
     for x in 0 ..< image.width:
       let p = vec2(x.float32, y.float32) - center
       let sd = sdRoundedBox(p, b, r)
-
 
       var c: ColorRGBA = if sd < 0.0: pos else: neg
       case mode:
       of sdfModeClip:
         discard
-      of sdfModeClipAliased:
+      of sdfModeClipAntiAlias:
         # we offset by 0.5 to make the edges blur
         # the clamping makes the transition go by ~1 pixel
         # then we mix the pos and neg colors based on the clamped value

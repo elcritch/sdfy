@@ -5,7 +5,7 @@ type
     sdfModeFeather
     sdfModeFeatherInv
     sdfModeClip
-    sdfModeClipAliased
+    sdfModeClipAntiAlias
     sdfModeFeatherGaussian
     sdfModeDropShadow
 

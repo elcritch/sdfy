@@ -127,7 +127,8 @@ Render a rounded rectangle to an image using SDF.
 
 ```nim
 type SDFMode = enum
-  sdfModeClip           # Sharp edges, no anti-aliasing
+  sdfModeClip           # Clipped without anti-aliasing
+  sdfModeClipAntiAlias  # Clipped with anti-aliasing
   sdfModeFeather        # Standard anti-aliasing
   sdfModeFeatherInv     # Inverted anti-aliasing  
   sdfModeFeatherGaussian # Gaussian anti-aliasing
