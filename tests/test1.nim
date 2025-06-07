@@ -38,7 +38,7 @@ proc main() =
   image.writeFile("tests/outputs/rounded_box_pixie.png")
 
   timeIt "clip - rounded":
-    signedBox(image,
+    drawSdfShape(image,
               center = center,
               wh = wh,
               params = RoundedBoxParams(r: corners),
@@ -49,7 +49,7 @@ proc main() =
   image.writeFile("tests/outputs/rounded_box_clip.png")
 
   timeIt "clipAliased - rounded":
-    signedBox(image,
+    drawSdfShape(image,
               center = center,
               wh = wh,
               params = RoundedBoxParams(r: corners),
@@ -60,7 +60,7 @@ proc main() =
   image.writeFile("tests/outputs/rounded_box_clip_aliased.png")
 
   timeIt "clip - chamfer":
-    signedBox(image,
+    drawSdfShape(image,
               center = center,
               wh = wh,
               params = ChamferBoxParams(chamfer: 20.0),
@@ -71,7 +71,7 @@ proc main() =
   image.writeFile("tests/outputs/chamfer_box_clip.png")
 
   timeIt "clipAliased - chamfer":
-    signedBox(image,
+    drawSdfShape(image,
               center = center,
               wh = wh,
               params = ChamferBoxParams(chamfer: 20.0),
