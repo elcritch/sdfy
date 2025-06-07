@@ -24,7 +24,7 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 
 ## Examples
 
-Benchmarks:
+Benchmarks on Mackbook Pro M3:
 
 - pixie shadow: 434 ms
 - sdf clip: 4 ms
