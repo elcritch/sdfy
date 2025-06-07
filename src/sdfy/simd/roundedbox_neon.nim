@@ -78,7 +78,7 @@ proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {
   result = vaddq_f32(vsubq_f32(vaddq_f32(min_max_q, length_vec), corner_radius), zero)
 
 proc signedRoundedBoxNeon*(
-    image: Image,
+    image: SdfImage,
     center: Vec2,
     wh: Vec2,
     r: Vec4,
