@@ -22,5 +22,5 @@ when allowSimd:
     export nimsimdsse2
 
   elif defined(arm64):
-    import ./roundedbox/neon
+    import ./neon/roundedbox
 

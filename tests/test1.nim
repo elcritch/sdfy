@@ -10,6 +10,7 @@ template timeIt(name: string, body: untyped) =
   let stop = getMonoTime()
   echo name, ": ", inMilliseconds(stop - start), " ms"
 
+
 proc main() =
   let image = newImage(300, 300)
   let center = vec2(150.0, 150.0)
