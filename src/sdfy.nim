@@ -3,7 +3,7 @@ import pixie, vmath, pixie/simd
 
 import sdfy/sdfytypes
 
-import sdfy/roundedbox
+import sdfy/shapes
 
 export sdfytypes
-export roundedbox
+export shapes
