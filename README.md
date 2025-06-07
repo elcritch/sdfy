@@ -24,14 +24,14 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 
 ## Examples
 
-Benchmarks on Mackbook Pro M3:
-
-- pixie shadow: 434 ms
-- sdf clip: 4 ms
-- sdf feather: 6 ms
-- sdf featherInv: 6 ms
-- sdf featherGaussian: 7 ms
-- sdf dropShadow: 7 ms
+| Mode | With SIMD | Without SIMD |
+|------|-----------|--------------|
+| Pixie Shadow | 434 ms | 441 ms |
+| SDF Clip | 4 ms | 19 ms |
+| SDF Feather | 6 ms | 20 ms |
+| SDF Feather Inverse | 6 ms | 20 ms |
+| SDF Feather Gaussian | 7 ms | 22 ms |
+| SDF Drop Shadow | 7 ms | 22 ms |
 
 Here are examples of the different rendering modes applied to rounded rectangles:
 
