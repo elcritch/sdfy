@@ -16,7 +16,7 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 
 ## Rendering Modes
 
-- **Clip**: Sharp, aliased edges
+- **Clip**: Sharp edges (aliasing TBD)
 - **Feather**: Anti-aliased edges with customizable factor
 - **Feather Inverse**: Inverted feather anti-aliasing
 - **Feather Gaussian**: Gaussian-based anti-aliasing for smooth edges  
