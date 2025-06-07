@@ -6,7 +6,7 @@ import ./simd/roundedboxSimd
 
 export roundedboxSimd
 
-proc sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
+func sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   ## Signed distance function for a rounded box
   ## p: point to test
   ## b: box half-extents (width/2, height/2)
@@ -23,7 +23,7 @@ proc sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   
   result = min(max(q.x, q.y), 0.0) + length(max(q, vec2(0.0, 0.0))) - cornerRadius.x
 
-proc sdChamferBox*(p: Vec2, b: Vec2, chamfer: float32): float32 {.inline.} =
+func sdChamferBox*(p: Vec2, b: Vec2, chamfer: float32): float32 {.inline.} =
   ## Signed distance function for a chamfered box
   ## p: point to test
   ## b: box half-extents (width/2, height/2)
