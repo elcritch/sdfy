@@ -13,3 +13,4 @@ nim.cfg
 nimble.develop
 nimble.paths
 tests/outputs
+.DS_Store

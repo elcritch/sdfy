@@ -148,19 +148,20 @@ proc sdChamferBoxSimd*(px, py: float32x4, bx, by: float32, chamfer: float32): fl
   # Then select between case1 and case23 based on both_conditions
   result = vbslq_f32(both_conditions, case1_result, case23_result)
 
-proc signedRoundedBoxNeon*[I](
+proc drawSdfShapeNeon*[I, T](
     image: I,
     center: Vec2,
     wh: Vec2,
-    r: Vec4,
+    params: T,
     pos: ColorRGBA, neg: ColorRGBA,
     factor: float32 = 4.0,
     spread: float32 = 0.0,
     mode: SDFMode = sdfModeFeather
 ) {.simd, raises: [].} =
-  ## NEON SIMD optimized version of signedRoundedBoxFeather
+  ## NEON SIMD optimized version of drawSdfShape
+  ## Generic function that supports both rounded and chamfer boxes
   ## Processes pixels in chunks of 4 with padding for remaining pixels
-  ## clip: if true, use solid colors without feathering based on SDF sign
+  ## T: RoundedBoxParams or ChamferBoxParams
   
   let
     pos_rgbx = pos.rgbx()
@@ -195,8 +196,13 @@ proc signedRoundedBoxNeon*[I](
       
       let px_vec = vld1q_f32(px_array[0].addr)
       
-      # Calculate signed distances for 4 pixels
-      let sd_vec = sdRoundedBoxSimd(px_vec, py_vec, b_x, b_y, r)
+      # Calculate signed distances for 4 pixels using appropriate SDF function
+      let sd_vec = when T is RoundedBoxParams:
+        sdRoundedBoxSimd(px_vec, py_vec, b_x, b_y, params.r)
+      elif T is ChamferBoxParams:
+        sdChamferBoxSimd(px_vec, py_vec, b_x, b_y, params.chamfer)
+      else:
+        {.error: "Unsupported box parameter type".}
       
       # Extract individual values for color selection
       var sd_array: array[4, float32]
@@ -387,6 +393,33 @@ proc signedRoundedBoxNeon*[I](
           image.data[idx] = final_color
       
       x += remainingPixels
+
+# Backwards compatibility aliases
+proc signedRoundedBoxNeon*[I](
+    image: I,
+    center: Vec2,
+    wh: Vec2,
+    r: Vec4,
+    pos: ColorRGBA, neg: ColorRGBA,
+    factor: float32 = 4.0,
+    spread: float32 = 0.0,
+    mode: SDFMode = sdfModeFeather
+) {.simd, raises: [].} =
+  ## Backwards compatibility wrapper for signedRoundedBoxNeon
+  drawSdfShapeNeon(image, center, wh, RoundedBoxParams(r: r), pos, neg, factor, spread, mode)
+
+proc signedChamferBoxNeon*[I](
+    image: I,
+    center: Vec2,
+    wh: Vec2,
+    chamfer: float32,
+    pos: ColorRGBA, neg: ColorRGBA,
+    factor: float32 = 4.0,
+    spread: float32 = 0.0,
+    mode: SDFMode = sdfModeFeather
+) {.simd, raises: [].} =
+  ## Backwards compatibility wrapper for signedChamferBoxNeon
+  drawSdfShapeNeon(image, center, wh, ChamferBoxParams(chamfer: chamfer), pos, neg, factor, spread, mode)
 
 when defined(release):
   {.pop.}
