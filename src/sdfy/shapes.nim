@@ -93,10 +93,10 @@ proc drawSdfShape*[I, T](
         let cl = clamp(sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
       of sdfModeAnnular:
-        let sd = abs(sd) - factor;
+        let sd = abs(sd + factor) - factor;
         c = if sd < 0.0: pos else: neg
       of sdfModeAnnularAA:
-        let sd = abs(sd) - factor;
+        let sd = abs(sd + factor) - factor;
         c = if sd < 0.0: pos else: neg
         let cl = clamp(sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
