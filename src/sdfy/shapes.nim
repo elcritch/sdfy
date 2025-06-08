@@ -110,7 +110,7 @@ func sdBox*(p: Vec2, b: Vec2): float32 {.inline.} =
   let d = abs(p) - b
   return length(max(d, vec2(0.0, 0.0))) + min(max(d.x, d.y), 0.0)
 
-func sdEllipse*(p: Vec2, ab: Vec2): float32 {.inline.} =
+func sdEllipse*(p: Vec2, ab: Vec2): float32 =
   ## Signed distance function for an ellipse
   ## p: point to test
   ## ab: ellipse semi-axes (width/2, height/2)

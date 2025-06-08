@@ -3,6 +3,7 @@ import vmath, chroma, pixie
 import nimsimd/hassimd, nimsimd/neon
 
 import ../../sdfytypes
+import ../../shapes
 
 when defined(release):
   {.push checks: off.}
@@ -303,52 +304,11 @@ proc sdEllipseSimd*(px, py: float32x4, abx, aby: float32): float32x4 {.inline, r
   vst1q_f32(px_array[0].addr, px)
   vst1q_f32(py_array[0].addr, py)
   
-  # Process each pixel individually using the scalar ellipse algorithm
   for i in 0..3:
-    var
-      p = abs(vec2(px_array[i], py_array[i]))
+    let
+      pos = vec2(px_array[i], py_array[i])
       ab = vec2(abx, aby)
-    
-    # Swap coordinates if needed to ensure p.x <= p.y
-    if p.x > p.y:
-      p = vec2(p.y, p.x)
-      ab = vec2(ab.y, ab.x)
-    
-    let
-      l = ab.y*ab.y - ab.x*ab.x
-      m = ab.x*p.x/l
-      m2 = m*m
-      n = ab.y*p.y/l
-      n2 = n*n
-      c = (m2 + n2 - 1.0'f32) / 3.0'f32
-      c3 = c*c*c
-      q = c3 + m2*n2*2.0'f32
-      d = c3 + m2*n2
-      g = m + m*n2
-    
-    var co: float32
-    if d < 0.0'f32:
-      let
-        h = arccos(q/c3) / 3.0'f32
-        s = cos(h)
-        t = sin(h) * sqrt(3.0'f32)
-        rx = sqrt(-c*(s + t + 2.0'f32) + m2)
-        ry = sqrt(-c*(s - t + 2.0'f32) + m2)
-      co = (ry + sign(l)*rx + abs(g)/(rx*ry) - m) / 2.0'f32
-    else:
-      let
-        h = 2.0'f32*m*n*sqrt(d)
-        s = sign(q + h) * pow(abs(q + h), 1.0'f32/3.0'f32)
-        u = sign(q - h) * pow(abs(q - h), 1.0'f32/3.0'f32)
-        rx = -s - u - c*4.0'f32 + 2.0'f32*m2
-        ry = (s - u) * sqrt(3.0'f32)
-        rm = sqrt(rx*rx + ry*ry)
-      co = (ry/sqrt(rm - rx) + 2.0'f32*g/rm - m) / 2.0'f32
-    
-    let
-      r = ab * vec2(co, sqrt(1.0'f32 - co*co))
-      original_p = vec2(px_array[i], py_array[i])
-    result_array[i] = length(r - p) * sign(original_p.y - r.y)
+    result_array[i] = sdEllipse(pos, ab)
   
   # Load result back into SIMD register
   result = vld1q_f32(result_array[0].addr)
