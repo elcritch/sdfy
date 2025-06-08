@@ -105,6 +105,14 @@ func sdBezier*(pos: Vec2, A: Vec2, B: Vec2, C: Vec2): float32 {.inline.} =
   
   return sqrt(res)
 
+func sdBox*(p: Vec2, b: Vec2): float32 {.inline.} =
+  ## Signed distance function for a box/rectangle
+  ## p: point to test
+  ## b: box half-extents (width/2, height/2)
+  ## Returns: signed distance (negative inside, positive outside)
+  let d = abs(p) - b
+  return length(max(d, vec2(0.0, 0.0))) + min(max(d.x, d.y), 0.0)
+
 proc drawSdfShape*[I, T](
     image: I,
     center: Vec2,
@@ -135,6 +143,8 @@ proc drawSdfShape*[I, T](
         sdCircle(p, params.r)
       elif T is BezierParams:
         sdBezier(p, params.A, params.B, params.C)
+      elif T is BoxParams:
+        sdBox(p, params.b)
       else:
         {.error: "Unsupported shape parameter type".}
 

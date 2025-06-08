@@ -127,5 +127,23 @@ proc main() =
 
     image.writeFile(fileName)
 
+  # Test boxes
+  for testMode in testModes:
+    let testName = "box - " & testMode.name
+    let fileName = "tests/outputs/box_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for boxes since we specify half-extents directly
+                  params = BoxParams(b: vec2(80.0, 60.0)),  # 160x120 pixel box
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
 for i in 0 ..< 1:
   main()
