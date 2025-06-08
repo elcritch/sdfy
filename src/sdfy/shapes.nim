@@ -199,3 +199,28 @@ func sdParallelogram*(p: Vec2, wi: float32, he: float32, sk: float32): float32 {
   d = vec2(min(d.x, dot(v, v)), min(d.y, wi * he - abs(s)))
   
   return sqrt(d.x) * sign(-d.y)
+
+func sdPie*(p: Vec2, c: Vec2, r: float32): float32 {.inline.} =
+  ## Signed distance function for a pie slice
+  ## p: point to test
+  ## c: sin/cos of the pie's aperture (c.x = sin, c.y = cos)
+  ## r: radius
+  ## Returns: signed distance (negative inside, positive outside)
+  
+  # p.x = abs(p.x) - equivalent to taking absolute value of x coordinate
+  var p_mod = vec2(abs(p.x), p.y)
+  
+  # Calculate l = length(p) - r
+  let l = length(p_mod) - r
+  
+  # Calculate m = length(p - c*clamp(dot(p,c), 0.0, r))
+  let
+    dot_pc = dot(p_mod, c)
+    clamped_dot = clamp(dot_pc, 0.0, r)
+    m = length(p_mod - c * clamped_dot)
+  
+  # Calculate sign(c.y*p.x - c.x*p.y)
+  let sign_val = sign(c.y * p_mod.x - c.x * p_mod.y)
+  
+  # Return max(l, m*sign_val)
+  return max(l, m * sign_val)

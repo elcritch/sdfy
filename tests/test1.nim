@@ -208,5 +208,26 @@ proc main() =
 
     image.writeFile(fileName)
 
+  # Test pies
+  for testMode in testModes:
+    let testName = "pie - " & testMode.name
+    let fileName = "tests/outputs/pie_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for pies, but kept for API consistency
+                  params = PieParams(
+                    c: vec2(sin(PI/3), cos(PI/3)),  # 60 degree aperture
+                    r: 80.0   # radius
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
 for i in 0 ..< 1:
   main()

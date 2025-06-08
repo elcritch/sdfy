@@ -58,6 +58,11 @@ type
     he*: float32  ## height
     sk*: float32  ## skew
 
+  PieParams* = object
+    ## Parameters for pie SDF
+    c*: Vec2  ## sin/cos of the pie's aperture
+    r*: float32  ## radius
+
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:
