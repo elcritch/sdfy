@@ -15,9 +15,6 @@ when not compiles(vsqrtq_f32(float32x4(0.0))):
 when not compiles(vcvtq_u32_f32(float32x4(0.0))):
   func vcvtq_u32_f32*(a: float32x4): uint32x4 {.header: "arm_neon.h".}
 
-# Helper function for dot product squared
-proc dot2(v: Vec2): float32 {.inline.} = dot(v, v)
-
 proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for rounded box
   ## Processes 4 pixels at once
@@ -239,13 +236,19 @@ proc sdBezierSimd*(px, py: float32x4, Ax, Ay, Bx, By, Cx, Cy: float32): float32x
   vst1q_f32(px_array[0].addr, px)
   vst1q_f32(py_array[0].addr, py)
   
+  # Helper function for dot product squared
+  proc dot2(v: Vec2): float32 {.inline.} = dot(v, v)
+  
   # Process each pixel individually using the scalar Bézier algorithm
   for i in 0..3:
     let
       pos = vec2(px_array[i], py_array[i])
-      ab = vec2(abx, aby)
+      A = vec2(Ax, Ay)
+      B = vec2(Bx, By)
+      C = vec2(Cx, Cy)
+      
     result_array[i] = sdBezier(pos, A, B, C)
-  
+
   # Load result back into SIMD register
   result = vld1q_f32(result_array[0].addr)
 

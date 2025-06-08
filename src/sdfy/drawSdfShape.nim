@@ -6,7 +6,7 @@ import ./shapes
 
 import ./simd/shapesSimd
 
-proc drawSdfShape*[I, T](
+proc drawSdfShapeImpl*[I, T](
     image: I,
     center: Vec2,
     wh: Vec2,
@@ -16,7 +16,7 @@ proc drawSdfShape*[I, T](
     factor: float32 = 4,
     spread: float32 = 0.0,
     mode: SDFMode = sdfModeFeatherInv
-) {.hasSimd, raises: [].} =
+) {.inline, raises: [].} =
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, and circles based on params type
   ## T: RoundedBoxParams, ChamferBoxParams, or CircleParams
@@ -89,3 +89,29 @@ proc drawSdfShape*[I, T](
 
       let idx = image.dataIndex(x, y)
       image.data[idx] = c.rgbx()
+
+proc drawSdfShape*[I, T](
+    image: I,
+    center: Vec2,
+    wh: Vec2,
+    params: T,
+    pos: ColorRGBA,
+    neg: ColorRGBA,
+    factor: float32 = 4,
+    spread: float32 = 0.0,
+    mode: SDFMode = sdfModeFeatherInv
+) {.hasSimd, raises: [].} =
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, factor, spread, mode)
+
+proc drawSdfShapeNonSimd*[I, T](
+    image: I,
+    center: Vec2,
+    wh: Vec2,
+    params: T,
+    pos: ColorRGBA,
+    neg: ColorRGBA,
+    factor: float32 = 4,
+    spread: float32 = 0.0,
+    mode: SDFMode = sdfModeFeatherInv
+) {.raises: [].} =
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, factor, spread, mode)
