@@ -16,7 +16,7 @@ proc drawSdfShapeImpl*[I, T](
     factor: float32 = 4,
     spread: float32 = 0.0,
     mode: SDFMode = sdfModeFeatherInv
-) {.inline, raises: [].} =
+) {.raises: [].} =
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, and circles based on params type
   ## T: RoundedBoxParams, ChamferBoxParams, or CircleParams

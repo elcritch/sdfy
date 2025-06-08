@@ -10,14 +10,30 @@ template timeIt(name: string, body: untyped) =
   let stop = getMonoTime()
   echo name, ": ", inMilliseconds(stop - start), " ms"
 
+let
+  image* = newImage(300, 300)
+  center* = vec2(image.width / 2, image.height / 2)
+  pos = rgba(255, 0, 0, 255)
+  neg = rgba(0, 0, 255, 255)
+  corners* = vec4(0.0, 20.0, 40.0, 80.0)
+  wh* = vec2(200.0, 200.0)
+
+# Define test modes
+let testModes* = [
+  (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeAnnular, name: "annular", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeAnnularAA, name: "annular_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeFeather, name: "feather", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeFeatherInv, name: "feather_inv", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeFeatherGaussian, name: "feather_gaussian", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeDropShadow, name: "drop_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+  (mode: sdfModeInsetShadow, name: "inset_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+  (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+]
+
 
 proc main() =
-  let image = newImage(300, 300)
-  let center = vec2(image.width / 2, image.height / 2)
-  let pos = rgba(255, 0, 0, 255)
-  let neg = rgba(0, 0, 255, 255)
-  let corners = vec4(0.0, 20.0, 40.0, 80.0)
-  let wh = vec2(200.0, 200.0)
 
   timeIt "base":
     let rect = newImage(300, 300)
@@ -35,20 +51,6 @@ proc main() =
     image.draw(rect)
 
   image.writeFile("tests/outputs/rounded_box_pixie.png")
-
-  # Define test modes
-  let testModes = [
-    (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeAnnular, name: "annular", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeAnnularAA, name: "annular_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeFeather, name: "feather", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeFeatherInv, name: "feather_inv", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeFeatherGaussian, name: "feather_gaussian", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeDropShadow, name: "drop_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
-    (mode: sdfModeInsetShadow, name: "inset_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
-    (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
-  ]
 
   # Test rounded boxes
   for testMode in testModes:
