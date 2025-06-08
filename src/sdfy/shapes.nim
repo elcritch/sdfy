@@ -86,10 +86,18 @@ proc drawSdfShape*[I, T](
       case mode:
       of sdfModeClip:
         discard
-      of sdfModeClipAntiAlias:
+      of sdfModeClipAA:
         # we offset by 0.5 to make the edges blur
         # the clamping makes the transition go by ~1 pixel
         # then we mix the pos and neg colors based on the clamped value
+        let cl = clamp(sd + 0.5, 0.0, 1.0)
+        c = mix(pos, neg, cl)
+      of sdfModeAnnular:
+        let sd = abs(sd) - factor;
+        c = if sd < 0.0: pos else: neg
+      of sdfModeAnnularAA:
+        let sd = abs(sd) - factor;
+        c = if sd < 0.0: pos else: neg
         let cl = clamp(sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
       of sdfModeFeather:
@@ -116,6 +124,7 @@ proc drawSdfShape*[I, T](
         let sd = sd / factor * s - spread / 8.8
         let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
         c.a = if sd < 0.0: uint8(min(f * 255 * 6, 255)) else: 0
+
 
       let idx = image.dataIndex(x, y)
       image.data[idx] = c.rgbx()
