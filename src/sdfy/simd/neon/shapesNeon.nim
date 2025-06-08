@@ -148,6 +148,33 @@ proc sdChamferBoxSimd*(px, py: float32x4, bx, by: float32, chamfer: float32): fl
   # Then select between case1 and case23 based on both_conditions
   result = vbslq_f32(both_conditions, case1_result, case23_result)
 
+proc sdCircleSimd*(px, py: float32x4, r: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for circle
+  ## Processes 4 pixels at once
+  
+  let
+    r_vec = vmovq_n_f32(r)
+  
+  # Calculate length(p) = sqrt(px^2 + py^2)
+  let
+    px_sq = vmulq_f32(px, px)
+    py_sq = vmulq_f32(py, py)
+    length_sq = vaddq_f32(px_sq, py_sq)
+  
+  # sqrt approximation using vsqrtq_f32 (available in ARMv8)
+  when defined(arm64) or defined(aarch64):
+    let length_vec = vsqrtq_f32(length_sq)
+  else:
+    # Fallback for older ARM processors
+    var length_array: array[4, float32]
+    vst1q_f32(length_array[0].addr, length_sq)
+    for i in 0..3:
+      length_array[i] = sqrt(length_array[i])
+    let length_vec = vld1q_f32(length_array[0].addr)
+  
+  # Return length(p) - r
+  result = vsubq_f32(length_vec, r_vec)
+
 proc drawSdfShapeNeon*[I, T](
     image: I,
     center: Vec2,
@@ -159,17 +186,15 @@ proc drawSdfShapeNeon*[I, T](
     mode: SDFMode = sdfModeFeather
 ) {.simd, raises: [].} =
   ## NEON SIMD optimized version of drawSdfShape
-  ## Generic function that supports both rounded and chamfer boxes
+  ## Generic function that supports rounded boxes, chamfer boxes, and circles
   ## Processes pixels in chunks of 4 with padding for remaining pixels
-  ## T: RoundedBoxParams or ChamferBoxParams
+  ## T: RoundedBoxParams, ChamferBoxParams, or CircleParams
   
   let
     pos_rgbx = pos.rgbx()
     neg_rgbx = neg.rgbx()
     center_x = center.x
     center_y = center.y
-    b_x = wh.x / 2.0
-    b_y = wh.y / 2.0
     four_vec = vmovq_n_f32(factor)
     offset_vec = vmovq_n_f32(127.0)
     zero_vec = vmovq_n_f32(0.0)
@@ -198,11 +223,19 @@ proc drawSdfShapeNeon*[I, T](
       
       # Calculate signed distances for 4 pixels using appropriate SDF function
       let sd_vec = when T is RoundedBoxParams:
+        let
+          b_x = wh.x / 2.0
+          b_y = wh.y / 2.0
         sdRoundedBoxSimd(px_vec, py_vec, b_x, b_y, params.r)
       elif T is ChamferBoxParams:
+        let
+          b_x = wh.x / 2.0
+          b_y = wh.y / 2.0
         sdChamferBoxSimd(px_vec, py_vec, b_x, b_y, params.chamfer)
+      elif T is CircleParams:
+        sdCircleSimd(px_vec, py_vec, params.r)
       else:
-        {.error: "Unsupported box parameter type".}
+        {.error: "Unsupported shape parameter type".}
       
       # Extract individual values for color selection
       var sd_array: array[4, float32]
@@ -420,6 +453,19 @@ proc signedChamferBoxNeon*[I](
 ) {.simd, raises: [].} =
   ## Backwards compatibility wrapper for signedChamferBoxNeon
   drawSdfShapeNeon(image, center, wh, ChamferBoxParams(chamfer: chamfer), pos, neg, factor, spread, mode)
+
+proc signedCircleNeon*[I](
+    image: I,
+    center: Vec2,
+    wh: Vec2,  # ignored for circles, but kept for API consistency
+    r: float32,
+    pos: ColorRGBA, neg: ColorRGBA,
+    factor: float32 = 4.0,
+    spread: float32 = 0.0,
+    mode: SDFMode = sdfModeFeather
+) {.simd, raises: [].} =
+  ## Backwards compatibility wrapper for signedCircleNeon
+  drawSdfShapeNeon(image, center, wh, CircleParams(r: r), pos, neg, factor, spread, mode)
 
 when defined(release):
   {.pop.}
