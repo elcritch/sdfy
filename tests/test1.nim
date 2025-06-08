@@ -44,7 +44,9 @@ proc main() =
     (mode: sdfModeFeather, name: "feather", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
     (mode: sdfModeFeatherInv, name: "feather_inv", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
     (mode: sdfModeFeatherGaussian, name: "feather_gaussian", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeDropShadow, name: "drop_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos)
+    (mode: sdfModeDropShadow, name: "drop_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+    (mode: sdfModeInsetShadow, name: "inset_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+    (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos)
   ]
 
   # Test rounded boxes

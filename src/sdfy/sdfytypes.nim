@@ -10,6 +10,7 @@ type
     sdfModeFeatherGaussian
     sdfModeDropShadow
     sdfModeInsetShadow
+    sdfModeInsetShadowAnnular
 
   SdfImage* = ref object
     ## Image object that holds bitmap data in premultiplied alpha RGBA format.
