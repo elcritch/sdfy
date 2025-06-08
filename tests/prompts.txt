@@ -12,7 +12,7 @@ float sdCircle( vec2 p, float r )
 
 # Prompt
 
-Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there using NEON SIMD. Then add it to the `drawSdfShape`. You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it will run the SIMD versions of test1.nim automatically. Don't call the falback non-SIMD version, just note if you're unable to implement a SIMD variant. 
+Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there using NEON SIMD. Then add it to the `drawSdfShape`. You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it will run the SIMD versions of test1.nim automatically. Don't call the falback non-SIMD version, just note if you're unable to implement a SIMD variant. Don't add anything to the fallback simd `fallbackShapesNeon.nim` either. 
 
 ## Prompt
 
