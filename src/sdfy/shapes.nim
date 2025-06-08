@@ -157,3 +157,22 @@ func sdEllipse*(p: Vec2, ab: Vec2): float32 =
   
   let r = ab * vec2(co, sqrt(1.0'f32 - co*co))
   return length(r - p) * sign(p.y - r.y)
+
+func sdArc*(p: Vec2, sc: Vec2, ra: float32, rb: float32): float32 {.inline.} =
+  ## Signed distance function for an arc
+  ## p: point to test
+  ## sc: sin/cos of the arc's aperture (sc.x = sin, sc.y = cos)
+  ## ra: inner radius
+  ## rb: thickness (outer radius difference)
+  ## Returns: signed distance (negative inside, positive outside)
+  
+  # p.x = abs(p.x) - equivalent to taking absolute value of x coordinate
+  var p_mod = vec2(abs(p.x), p.y)
+  
+  # Ternary operator: (sc.y*p.x>sc.x*p.y) ? length(p-sc*ra) : abs(length(p)-ra)) - rb
+  if sc.y * p_mod.x > sc.x * p_mod.y:
+    # First case: length(p - sc*ra) - rb
+    return length(p_mod - sc * ra) - rb
+  else:
+    # Second case: abs(length(p) - ra) - rb
+    return abs(length(p_mod) - ra) - rb

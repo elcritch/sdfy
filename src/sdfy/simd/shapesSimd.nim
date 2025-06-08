@@ -23,5 +23,7 @@ when allowSimd:
 
   elif defined(arm64) or defined(aarch64) or defined(arm):
     import ./neon/drawSdfShapeNeon
+    import ./neon/shapesNeon
     export drawSdfShapeNeon
+    export shapesNeon
 

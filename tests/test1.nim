@@ -164,5 +164,27 @@ proc main() =
 
     image.writeFile(fileName)
 
+  # Test arcs
+  for testMode in testModes:
+    let testName = "arc - " & testMode.name
+    let fileName = "tests/outputs/arc_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for arcs, but kept for API consistency
+                  params = ArcParams(
+                    sc: vec2(sin(PI/4), cos(PI/4)),  # 45 degree aperture
+                    ra: 80.0,   # inner radius
+                    rb: 20.0    # thickness
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
 for i in 0 ..< 1:
   main()

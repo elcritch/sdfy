@@ -46,6 +46,12 @@ type
     ## Parameters for ellipse SDF
     ab*: Vec2  ## ellipse semi-axes (width/2, height/2)
 
+  ArcParams* = object
+    ## Parameters for arc SDF
+    sc*: Vec2  ## sin/cos of the arc's aperture
+    ra*: float32  ## inner radius
+    rb*: float32  ## thickness (outer radius difference)
+
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:
