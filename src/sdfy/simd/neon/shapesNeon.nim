@@ -15,6 +15,9 @@ when not compiles(vsqrtq_f32(float32x4(0.0))):
 when not compiles(vcvtq_u32_f32(float32x4(0.0))):
   func vcvtq_u32_f32*(a: float32x4): uint32x4 {.header: "arm_neon.h".}
 
+# Helper function for dot product squared
+proc dot2(v: Vec2): float32 {.inline.} = dot(v, v)
+
 proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for rounded box
   ## Processes 4 pixels at once
@@ -236,56 +239,12 @@ proc sdBezierSimd*(px, py: float32x4, Ax, Ay, Bx, By, Cx, Cy: float32): float32x
   vst1q_f32(px_array[0].addr, px)
   vst1q_f32(py_array[0].addr, py)
   
-  # Helper function for dot product squared
-  proc dot2(v: Vec2): float32 {.inline.} = dot(v, v)
-  
   # Process each pixel individually using the scalar Bézier algorithm
   for i in 0..3:
     let
       pos = vec2(px_array[i], py_array[i])
-      A = vec2(Ax, Ay)
-      B = vec2(Bx, By)
-      C = vec2(Cx, Cy)
-      
-      a = B - A
-      b = A - 2.0'f32*B + C
-      c = a * 2.0'f32
-      d = A - pos
-      kk = 1.0'f32 / dot(b, b)
-      kx = kk * dot(a, b)
-      ky = kk * (2.0'f32*dot(a, a) + dot(d, b)) / 3.0'f32
-      kz = kk * dot(d, a)
-    
-    var res = 0.0'f32
-    let
-      p = ky - kx*kx
-      p3 = p*p*p
-      q = kx*(2.0'f32*kx*kx - 3.0'f32*ky) + kz
-      h = q*q + 4.0'f32*p3
-    
-    if h >= 0.0'f32:
-      let
-        h_sqrt = sqrt(h)
-        x = vec2((h_sqrt - q) / 2.0'f32, (-h_sqrt - q) / 2.0'f32)
-        uv = vec2(
-          sign(x.x) * pow(abs(x.x), 1.0'f32/3.0'f32),
-          sign(x.y) * pow(abs(x.y), 1.0'f32/3.0'f32)
-        )
-        t = clamp(uv.x + uv.y - kx, 0.0'f32, 1.0'f32)
-      res = dot2(d + (c + b*t)*t)
-    else:
-      let
-        z = sqrt(-p)
-        v = arccos(q / (p*z*2.0'f32)) / 3.0'f32
-        m = cos(v)
-        n = sin(v) * 1.732050808'f32  # sqrt(3)
-        t1 = clamp((m + m)*z - kx, 0.0'f32, 1.0'f32)
-        t2 = clamp((-n - m)*z - kx, 0.0'f32, 1.0'f32)
-        res1 = dot2(d + (c + b*t1)*t1)
-        res2 = dot2(d + (c + b*t2)*t2)
-      res = min(res1, res2)
-    
-    result_array[i] = sqrt(res)
+      ab = vec2(abx, aby)
+    result_array[i] = sdBezier(pos, A, B, C)
   
   # Load result back into SIMD register
   result = vld1q_f32(result_array[0].addr)
