@@ -1,5 +1,5 @@
 
-## Prompt
+# Prompt
 
 Great, now implement a new type in `sdftypes.nim` and implement a new func in `shapes.nim` for the following GLSL function below.  Add tests to `tests1.nim`. Don't summarize the results. Don't worry about implementing the SIMD version yet.
 
@@ -10,6 +10,10 @@ float sdCircle( vec2 p, float r )
 }
 ```
 
+# Prompt
+
+Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there using NEON SIMD. Then add it to the `drawSdfShape`. You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it will run the SIMD versions of test1.nim automatically. Don't call the falback non-SIMD version, just note if you're unable to implement a SIMD variant. 
+
 ## Prompt
 
 Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there.
@@ -19,7 +23,3 @@ You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it w
 ## Prompt
 
 Please update the Neon SIMD `drawSdfShapeNeon` proc to match `drawSdfShape` proc. There's a couple of new `SDFMode` cases like `sdfModeAnnular. Follow the patterns in `drawSdfShapeNeon.nim` regarding Neon SIMD. The test file to run is `tests/test1_simd.nim` which runs the same tests as `test1.nim` but with SIMD. 
-
-## Prompt
-
-Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there using NEON SIMD. Then add it to the `drawSdfShape`. You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it will run the SIMD versions of test1.nim automatically. Don't call the falback non-SIMD version, just note if you're unable to implement a SIMD variant. 
