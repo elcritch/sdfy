@@ -1,5 +1,5 @@
 
-# Prompt
+# Prompt add sdf function
 
 Great, now implement a new type in `sdftypes.nim` and implement a new func in `shapes.nim` for the following GLSL function below.  Add tests to `tests1.nim`. Don't summarize the results. Don't worry about implementing the SIMD version yet. Don't create new tests, just use `test1.nim` for testing.
 
@@ -10,9 +10,13 @@ float sdCircle( vec2 p, float r )
 }
 ```
 
-# Prompt
+# Prompt add simd version
 
 Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there using NEON SIMD. Then add it to the `drawSdfShape`. You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it will run the SIMD versions of test1.nim automatically. Don't call the falback non-SIMD version, just note if you're unable to implement a SIMD variant. Don't add anything to the fallback simd `fallbackShapesNeon.nim` either. 
+
+# Prompt README
+
+Please update the README with the new SDF shapes that have been added recently. Update the performance table as well. Don't add any more images. 
 
 ## Prompt
 
