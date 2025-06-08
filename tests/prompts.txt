@@ -1,0 +1,18 @@
+
+## Prompt
+
+Great, now implement a new type in `sdftypes.nim` and implement a new func in `shapes.nim` for the follow GLSL function: 
+
+```
+float sdCircle( vec2 p, float r )
+{
+    return length(p) - r;
+}
+```
+
+## Prompt
+
+Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there.
+Then add it to the `drawSdfShape`.
+You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it will run the SIMD versions of test1.nim automatically.
+
