@@ -105,5 +105,27 @@ proc main() =
 
     image.writeFile(fileName)
 
+  # Test Bézier curves
+  for testMode in testModes:
+    let testName = "bezier - " & testMode.name
+    let fileName = "tests/outputs/bezier_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for Bézier curves, but kept for API consistency
+                  params = BezierParams(
+                    A: vec2(50.0, 100.0),   # Start point (relative to center)
+                    B: vec2(0.0, -50.0),    # Control point
+                    C: vec2(-50.0, 100.0)   # End point
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
 for i in 0 ..< 1:
   main()

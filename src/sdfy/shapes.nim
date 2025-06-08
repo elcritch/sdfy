@@ -6,6 +6,9 @@ import ./simd/shapesSimd
 
 export shapesSimd
 
+# Note these functions were adapted from https://iquilezles.org/articles/distfunctions2d/
+# under the MIT license.
+
 func sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   ## Signed distance function for a rounded box
   ## p: point to test
@@ -51,6 +54,57 @@ func sdCircle*(p: Vec2, r: float32): float32 {.inline.} =
   ## Returns: signed distance (negative inside, positive outside)
   return length(p) - r
 
+func dot2*(v: Vec2): float32 {.inline.} =
+  ## Helper function to compute dot product of vector with itself (squared length)
+  return dot(v, v)
+
+func sdBezier*(pos: Vec2, A: Vec2, B: Vec2, C: Vec2): float32 {.inline.} =
+  ## Signed distance function for a quadratic Bézier curve
+  ## pos: point to test
+  ## A, B, C: control points of the quadratic Bézier curve
+  ## Returns: distance to the curve (always positive for curves)
+  let
+    a = B - A
+    b = A - 2.0'f32*B + C
+    c = a * 2.0'f32
+    d = A - pos
+    kk = 1.0'f32 / dot(b, b)
+    kx = kk * dot(a, b)
+    ky = kk * (2.0'f32*dot(a, a) + dot(d, b)) / 3.0'f32
+    kz = kk * dot(d, a)
+  
+  var res = 0.0'f32
+  let
+    p = ky - kx*kx
+    p3 = p*p*p
+    q = kx*(2.0'f32*kx*kx - 3.0'f32*ky) + kz
+    h = q*q + 4.0'f32*p3
+  
+  if h >= 0.0'f32:
+    let
+      h_sqrt = sqrt(h)
+      x = vec2((h_sqrt - q) / 2.0'f32, (-h_sqrt - q) / 2.0'f32)
+      # sign(x) * pow(abs(x), 1/3)
+      uv = vec2(
+        sign(x.x) * pow(abs(x.x), 1.0'f32/3.0'f32),
+        sign(x.y) * pow(abs(x.y), 1.0'f32/3.0'f32)
+      )
+      t = clamp(uv.x + uv.y - kx, 0.0'f32, 1.0'f32)
+    res = dot2(d + (c + b*t)*t)
+  else:
+    let
+      z = sqrt(-p)
+      v = arccos(q / (p*z*2.0'f32)) / 3.0'f32
+      m = cos(v)
+      n = sin(v) * 1.732050808'f32  # sqrt(3)
+      t1 = clamp((m + m)*z - kx, 0.0'f32, 1.0'f32)
+      t2 = clamp((-n - m)*z - kx, 0.0'f32, 1.0'f32)
+      res1 = dot2(d + (c + b*t1)*t1)
+      res2 = dot2(d + (c + b*t2)*t2)
+    res = min(res1, res2)
+  
+  return sqrt(res)
+
 proc drawSdfShape*[I, T](
     image: I,
     center: Vec2,
@@ -79,6 +133,8 @@ proc drawSdfShape*[I, T](
         sdChamferBox(p, b, params.chamfer)
       elif T is CircleParams:
         sdCircle(p, params.r)
+      elif T is BezierParams:
+        sdBezier(p, params.A, params.B, params.C)
       else:
         {.error: "Unsupported shape parameter type".}
 

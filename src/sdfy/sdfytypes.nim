@@ -32,6 +32,12 @@ type
     ## Parameters for circle SDF
     r*: float32  ## radius
 
+  BezierParams* = object
+    ## Parameters for quadratic Bézier curve SDF
+    A*: Vec2  ## first control point
+    B*: Vec2  ## second control point  
+    C*: Vec2  ## third control point
+
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:
