@@ -1,4 +1,5 @@
 import chroma
+import vmath
 
 type
   SDFMode* = enum
@@ -14,6 +15,14 @@ type
     ## compatible with Pixie's Image type
     width*, height*: int
     data*: seq[ColorRGBX]
+
+  RoundedBoxParams* = object
+    ## Parameters for rounded box SDF
+    r*: Vec4  ## corner radii as Vec4 (x=top-right, y=bottom-right, z=bottom-left, w=top-left)
+  
+  ChamferBoxParams* = object
+    ## Parameters for chamfer box SDF
+    chamfer*: float32  ## chamfer amount
 
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.

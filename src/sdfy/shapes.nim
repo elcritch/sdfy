@@ -6,15 +6,6 @@ import ./simd/shapesSimd
 
 export shapesSimd
 
-type
-  RoundedBoxParams* = object
-    ## Parameters for rounded box SDF
-    r*: Vec4  ## corner radii as Vec4 (x=top-right, y=bottom-right, z=bottom-left, w=top-left)
-  
-  ChamferBoxParams* = object
-    ## Parameters for chamfer box SDF
-    chamfer*: float32  ## chamfer amount
-
 func sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   ## Signed distance function for a rounded box
   ## p: point to test
