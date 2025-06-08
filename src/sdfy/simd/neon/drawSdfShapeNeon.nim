@@ -19,9 +19,9 @@ proc drawSdfShapeNeon*[I, T](
     mode: SDFMode = sdfModeFeather
 ) {.simd, raises: [].} =
   ## NEON SIMD optimized version of drawSdfShape
-  ## Generic function that supports rounded boxes, chamfer boxes, circles, Bézier curves, boxes, ellipses, and arcs
+  ## Generic function that supports rounded boxes, chamfer boxes, circles, Bézier curves, boxes, ellipses, arcs, and parallelograms
   ## Processes pixels in chunks of 4 with padding for remaining pixels
-  ## T: RoundedBoxParams, ChamferBoxParams, CircleParams, BezierParams, BoxParams, EllipseParams, or ArcParams
+  ## T: RoundedBoxParams, ChamferBoxParams, CircleParams, BezierParams, BoxParams, EllipseParams, ArcParams, or ParallelogramParams
   
   let
     pos_rgbx = pos.rgbx()
@@ -75,6 +75,8 @@ proc drawSdfShapeNeon*[I, T](
         sdEllipseSimd(px_vec, py_vec, params.ab.x, params.ab.y)
       elif T is ArcParams:
         sdArcSimd(px_vec, py_vec, params.sc.x, params.sc.y, params.ra, params.rb)
+      elif T is ParallelogramParams:
+        sdParallelogramSimd(px_vec, py_vec, params.wi, params.he, params.sk)
       else:
         {.error: "Unsupported shape parameter type".}
       

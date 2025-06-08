@@ -14,6 +14,8 @@ when not compiles(vsqrtq_f32(float32x4(0.0))):
   func vsqrtq_f32*(a: float32x4): float32x4 {.header: "arm_neon.h".}
 when not compiles(vcvtq_u32_f32(float32x4(0.0))):
   func vcvtq_u32_f32*(a: float32x4): uint32x4 {.header: "arm_neon.h".}
+when not compiles(vnegq_f32(float32x4(0.0))):
+  func vnegq_f32*(a: float32x4): float32x4 {.header: "arm_neon.h".}
 
 proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for rounded box
@@ -297,6 +299,114 @@ proc sdArcSimd*(px, py: float32x4, scx, scy, ra, rb: float32): float32x4 {.inlin
   
   # Select result based on condition: condition ? case1_result : case2_result
   result = vbslq_f32(condition, case1_result, case2_result)
+
+proc sdParallelogramSimd*(px, py: float32x4, wi, he, sk: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for parallelogram
+  ## Processes 4 pixels at once using pure NEON SIMD operations
+  
+  let
+    zero = vmovq_n_f32(0.0)
+    one = vmovq_n_f32(1.0)
+    neg_one = vmovq_n_f32(-1.0)
+    wi_vec = vmovq_n_f32(wi)
+    he_vec = vmovq_n_f32(he)
+    sk_vec = vmovq_n_f32(sk)
+    neg_wi_vec = vmovq_n_f32(-wi)
+  
+  # let e = vec2(sk, he)
+  let ex = sk_vec
+  let ey = he_vec
+  
+  # var p = if p.y < 0.0: -p else: p
+  let
+    py_lt_zero = vcltq_f32(py, zero)  # py < 0.0
+    p_x = vbslq_f32(py_lt_zero, vnegq_f32(px), px)  # if py < 0: -px else: px
+    p_y = vbslq_f32(py_lt_zero, vnegq_f32(py), py)  # if py < 0: -py else: py
+  
+  # var w = p - e
+  let
+    w_x = vsubq_f32(p_x, ex)  # p.x - e.x
+    w_y = vsubq_f32(p_y, ey)  # p.y - e.y
+  
+  # w.x -= clamp(w.x, -wi, wi)
+  let
+    clamped_wx = vmaxq_f32(vminq_f32(w_x, wi_vec), neg_wi_vec)  # clamp(w.x, -wi, wi)
+    final_w_x = vsubq_f32(w_x, clamped_wx)  # w.x - clamp(w.x, -wi, wi)
+  
+  # var d = vec2(dot(w, w), -w.y)
+  let
+    w_dot_w = vaddq_f32(vmulq_f32(final_w_x, final_w_x), vmulq_f32(w_y, w_y))  # w.x^2 + w.y^2
+    d_x = w_dot_w  # dot(w, w)
+    d_y = vnegq_f32(w_y)  # -w.y
+  
+  # let s = p.x * e.y - p.y * e.x
+  let s = vsubq_f32(vmulq_f32(p_x, ey), vmulq_f32(p_y, ex))  # p.x * e.y - p.y * e.x
+  
+  # p = if s < 0.0: -p else: p
+  let
+    s_lt_zero = vcltq_f32(s, zero)  # s < 0.0
+    final_p_x = vbslq_f32(s_lt_zero, vnegq_f32(p_x), p_x)  # if s < 0: -p.x else: p.x
+    final_p_y = vbslq_f32(s_lt_zero, vnegq_f32(p_y), p_y)  # if s < 0: -p.y else: p.y
+  
+  # var v = p - vec2(wi, 0.0)
+  let
+    v_x = vsubq_f32(final_p_x, wi_vec)  # p.x - wi
+    v_y = final_p_y  # p.y - 0.0 = p.y
+  
+  # dot(v, e) / dot(e, e)
+  let
+    v_dot_e = vaddq_f32(vmulq_f32(v_x, ex), vmulq_f32(v_y, ey))  # v.x * e.x + v.y * e.y
+    e_dot_e = vaddq_f32(vmulq_f32(ex, ex), vmulq_f32(ey, ey))  # e.x^2 + e.y^2
+    # We need to divide v_dot_e by e_dot_e, but since e_dot_e is scalar, we can use vdivq_f32
+    ratio = vdivq_f32(v_dot_e, e_dot_e)
+  
+  # clamp(dot(v,e)/dot(e,e), -1.0, 1.0)
+  let clamped_ratio = vmaxq_f32(vminq_f32(ratio, one), neg_one)  # clamp(ratio, -1.0, 1.0)
+  
+  # v -= e * clamp(dot(v,e)/dot(e,e), -1.0, 1.0)
+  let
+    e_scaled_x = vmulq_f32(ex, clamped_ratio)  # e.x * clamped_ratio
+    e_scaled_y = vmulq_f32(ey, clamped_ratio)  # e.y * clamped_ratio
+    final_v_x = vsubq_f32(v_x, e_scaled_x)  # v.x - e.x * clamped_ratio
+    final_v_y = vsubq_f32(v_y, e_scaled_y)  # v.y - e.y * clamped_ratio
+  
+  # dot(v, v)
+  let v_dot_v = vaddq_f32(vmulq_f32(final_v_x, final_v_x), vmulq_f32(final_v_y, final_v_y))
+  
+  # wi * he - abs(s)
+  let
+    wi_times_he = vmulq_f32(wi_vec, he_vec)  # wi * he
+    abs_s = vabsq_f32(s)  # abs(s)
+    wi_he_minus_abs_s = vsubq_f32(wi_times_he, abs_s)  # wi * he - abs(s)
+  
+  # d = min(d, vec2(dot(v,v), wi*he-abs(s)))
+  let
+    final_d_x = vminq_f32(d_x, v_dot_v)  # min(d.x, dot(v,v))
+    final_d_y = vminq_f32(d_y, wi_he_minus_abs_s)  # min(d.y, wi*he-abs(s))
+  
+  # sqrt(d.x) * sign(-d.y)
+  # Calculate sqrt(d.x)
+  when defined(arm64) or defined(aarch64):
+    let sqrt_dx = vsqrtq_f32(final_d_x)
+  else:
+    # Fallback for older ARM processors
+    var sqrt_array: array[4, float32]
+    vst1q_f32(sqrt_array[0].addr, final_d_x)
+    for i in 0..3:
+      sqrt_array[i] = sqrt(sqrt_array[i])
+    let sqrt_dx = vld1q_f32(sqrt_array[0].addr)
+  
+  # Calculate sign(-d.y)
+  let
+    neg_d_y = vnegq_f32(final_d_y)  # -d.y
+    # sign function: returns 1.0 if x > 0, -1.0 if x < 0, 0.0 if x == 0
+    # Using comparison and selection
+    pos_mask = vcgtq_f32(neg_d_y, zero)  # neg_d_y > 0
+    neg_mask = vcltq_f32(neg_d_y, zero)  # neg_d_y < 0
+    sign_val = vbslq_f32(pos_mask, one, vbslq_f32(neg_mask, neg_one, zero))
+  
+  # Return sqrt(d.x) * sign(-d.y)
+  result = vmulq_f32(sqrt_dx, sign_val)
 
 when defined(release):
   {.pop.}
