@@ -106,5 +106,11 @@ proc drawSdfShape*[I, T](
         let sd = sd / factor * s - spread / 8.8
         let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
         c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: 255
+      of sdfModeInsetShadow:
+        let s = 2.2
+        let sd = sd / factor * s - spread / 8.8
+        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: 255
+
       let idx = image.dataIndex(x, y)
       image.data[idx] = c.rgbx()
