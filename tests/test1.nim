@@ -83,5 +83,23 @@ proc main() =
 
     image.writeFile(fileName)
 
+  # Test circles
+  for testMode in testModes:
+    let testName = "circle - " & testMode.name
+    let fileName = "tests/outputs/circle_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for circles, but kept for API consistency
+                  params = CircleParams(r: 100.0),  # 100 pixel radius
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
 for i in 0 ..< 1:
   main()

@@ -44,6 +44,13 @@ func sdChamferBox*(p: Vec2, b: Vec2, chamfer: float32): float32 {.inline.} =
   
   return length(p)
 
+func sdCircle*(p: Vec2, r: float32): float32 {.inline.} =
+  ## Signed distance function for a circle
+  ## p: point to test
+  ## r: radius
+  ## Returns: signed distance (negative inside, positive outside)
+  return length(p) - r
+
 proc drawSdfShape*[I, T](
     image: I,
     center: Vec2,
@@ -55,9 +62,9 @@ proc drawSdfShape*[I, T](
     spread: float32 = 0.0,
     mode: SDFMode = sdfModeFeatherInv
 ) {.hasSimd, raises: [].} =
-  ## Generic signed distance function for boxes
-  ## Supports both rounded and chamfered boxes based on params type
-  ## T: RoundedBoxParams or ChamferBoxParams
+  ## Generic signed distance function for shapes
+  ## Supports rounded boxes, chamfered boxes, and circles based on params type
+  ## T: RoundedBoxParams, ChamferBoxParams, or CircleParams
   let
     b = wh / 2.0
 
@@ -70,8 +77,10 @@ proc drawSdfShape*[I, T](
         sdRoundedBox(p, b, params.r)
       elif T is ChamferBoxParams:
         sdChamferBox(p, b, params.chamfer)
+      elif T is CircleParams:
+        sdCircle(p, params.r)
       else:
-        {.error: "Unsupported box parameter type".}
+        {.error: "Unsupported shape parameter type".}
 
       var c: ColorRGBA = if sd < 0.0: pos else: neg
       case mode:

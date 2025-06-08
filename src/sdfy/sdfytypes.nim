@@ -24,6 +24,10 @@ type
     ## Parameters for chamfer box SDF
     chamfer*: float32  ## chamfer amount
 
+  CircleParams* = object
+    ## Parameters for circle SDF
+    r*: float32  ## radius
+
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:
