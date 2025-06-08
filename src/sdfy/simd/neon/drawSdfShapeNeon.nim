@@ -159,9 +159,7 @@ proc drawSdfShapeNeon*[I, T](
         # Process only the actual pixels (not the padded ones)
         for i in 0 ..< remainingPixels:
           let
-            sd = annular_sd_array[i]
             cl = clamped_array[i]
-            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
             # mix(pos, neg, cl) = pos * (1 - cl) + neg * cl
             mixed_color = mix(pos_rgbx, neg_rgbx, cl)
             idx = row_start + x + i
@@ -271,7 +269,6 @@ proc drawSdfShapeNeon*[I, T](
         
         # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
         let
-          factor_vec = vmovq_n_f32(factor)
           s_vec = vmovq_n_f32(s)
           spread_offset = vmovq_n_f32(spread / 8.8'f32)
           # Use multiplication by reciprocal instead of division
@@ -329,7 +326,6 @@ proc drawSdfShapeNeon*[I, T](
         
         # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
         let
-          factor_vec = vmovq_n_f32(factor)
           s_vec = vmovq_n_f32(s)
           spread_offset = vmovq_n_f32(spread / 8.8'f32)
           # Use multiplication by reciprocal instead of division
@@ -387,7 +383,6 @@ proc drawSdfShapeNeon*[I, T](
         
         # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
         let
-          factor_vec = vmovq_n_f32(factor)
           s_vec = vmovq_n_f32(s)
           spread_offset = vmovq_n_f32(spread / 8.8'f32)
           # Use multiplication by reciprocal instead of division
