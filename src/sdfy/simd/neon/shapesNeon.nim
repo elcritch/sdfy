@@ -408,5 +408,87 @@ proc sdParallelogramSimd*(px, py: float32x4, wi, he, sk: float32): float32x4 {.i
   # Return sqrt(d.x) * sign(-d.y)
   result = vmulq_f32(sqrt_dx, sign_val)
 
+proc sdPieSimd*(px, py: float32x4, cx, cy, r: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for pie slice
+  ## Processes 4 pixels at once using pure NEON SIMD operations
+  
+  let
+    zero = vmovq_n_f32(0.0)
+    one = vmovq_n_f32(1.0)
+    neg_one = vmovq_n_f32(-1.0)
+    cx_vec = vmovq_n_f32(cx)
+    cy_vec = vmovq_n_f32(cy)
+    r_vec = vmovq_n_f32(r)
+  
+  # p.x = abs(p.x) - take absolute value of x coordinate
+  let px_abs = vabsq_f32(px)
+  
+  # Calculate l = length(p) - r
+  let
+    px_abs_sq = vmulq_f32(px_abs, px_abs)
+    py_sq = vmulq_f32(py, py)
+    length_p_sq = vaddq_f32(px_abs_sq, py_sq)
+  
+  # sqrt approximation using vsqrtq_f32
+  when defined(arm64) or defined(aarch64):
+    let length_p = vsqrtq_f32(length_p_sq)
+  else:
+    # Fallback for older ARM processors
+    var length_array: array[4, float32]
+    vst1q_f32(length_array[0].addr, length_p_sq)
+    for i in 0..3:
+      length_array[i] = sqrt(length_array[i])
+    let length_p = vld1q_f32(length_array[0].addr)
+  
+  let l = vsubq_f32(length_p, r_vec)  # length(p) - r
+  
+  # Calculate m = length(p - c*clamp(dot(p,c), 0.0, r))
+  # First calculate dot(p, c)
+  let
+    dot_pc = vaddq_f32(vmulq_f32(px_abs, cx_vec), vmulq_f32(py, cy_vec))  # px_abs * cx + py * cy
+  
+  # clamp(dot_pc, 0.0, r)
+  let clamped_dot = vmaxq_f32(vminq_f32(dot_pc, r_vec), zero)  # clamp(dot_pc, 0.0, r)
+  
+  # Calculate c * clamped_dot
+  let
+    c_scaled_x = vmulq_f32(cx_vec, clamped_dot)  # cx * clamped_dot
+    c_scaled_y = vmulq_f32(cy_vec, clamped_dot)  # cy * clamped_dot
+  
+  # Calculate p - c*clamped_dot
+  let
+    diff_x = vsubq_f32(px_abs, c_scaled_x)  # px_abs - cx*clamped_dot
+    diff_y = vsubq_f32(py, c_scaled_y)      # py - cy*clamped_dot
+  
+  # Calculate length(p - c*clamped_dot)
+  let
+    diff_x_sq = vmulq_f32(diff_x, diff_x)
+    diff_y_sq = vmulq_f32(diff_y, diff_y)
+    diff_length_sq = vaddq_f32(diff_x_sq, diff_y_sq)
+  
+  when defined(arm64) or defined(aarch64):
+    let m = vsqrtq_f32(diff_length_sq)
+  else:
+    # Fallback for older ARM processors
+    var m_array: array[4, float32]
+    vst1q_f32(m_array[0].addr, diff_length_sq)
+    for i in 0..3:
+      m_array[i] = sqrt(m_array[i])
+    let m = vld1q_f32(m_array[0].addr)
+  
+  # Calculate sign(c.y*p.x - c.x*p.y)
+  let
+    sign_calc = vsubq_f32(vmulq_f32(cy_vec, px_abs), vmulq_f32(cx_vec, py))  # cy*px_abs - cx*py
+    # sign function: returns 1.0 if x > 0, -1.0 if x < 0, 0.0 if x == 0
+    pos_mask = vcgtq_f32(sign_calc, zero)  # sign_calc > 0
+    neg_mask = vcltq_f32(sign_calc, zero)  # sign_calc < 0
+    sign_val = vbslq_f32(pos_mask, one, vbslq_f32(neg_mask, neg_one, zero))
+  
+  # Calculate m * sign_val
+  let m_signed = vmulq_f32(m, sign_val)
+  
+  # Return max(l, m*sign_val)
+  result = vmaxq_f32(l, m_signed)
+
 when defined(release):
   {.pop.}
