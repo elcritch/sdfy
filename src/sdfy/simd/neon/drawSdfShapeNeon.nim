@@ -3,6 +3,7 @@ import vmath, chroma, pixie
 import nimsimd/hassimd, nimsimd/neon
 
 import ../../sdfytypes
+import ./shapesNeon
 
 when defined(release):
   {.push checks: off.}
