@@ -16,7 +16,7 @@ Great, next implement the `sdCircle` function in `shapesSimd.nim` following the 
 
 # Prompt README
 
-Please update the README with the new SDF shapes that have been added recently. Update the performance table as well. Don't add any more images. 
+Please update the README with the new SDF shapes that have been added recently. Update the performance table as well. Don't add any more images. Keep the Pixie Shadow example in the performance table to show why SDF functions are helpful.
 
 ## Prompt
 
