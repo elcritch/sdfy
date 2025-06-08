@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.4.2"
+version       = "0.5.0"
 author        = "Jaremy Creechley"
 description   = "A package implementing signed distance functions"
 license       = "Apache-2.0"
