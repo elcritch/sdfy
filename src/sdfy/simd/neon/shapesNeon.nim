@@ -222,58 +222,81 @@ proc sdBoxSimd*(px, py: float32x4, bx, by: float32): float32x4 {.inline, raises:
   # Return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0)
   result = vaddq_f32(length_vec, min_max_d)
 
-proc sdBezierSimd*(px, py: float32x4, Ax, Ay, Bx, By, Cx, Cy: float32): float32x4 {.inline, raises: [].} =
-  ## SIMD version of signed distance function for quadratic Bézier curve
-  ## Processes 4 pixels at once
-  ## For complex mathematical operations like Bézier curves, we'll fall back to scalar processing
-  
-  # For the complex Bézier curve algorithm with conditionals and mathematical functions
-  # like arccos, pow, etc., it's more efficient to process them individually
-  var result_array: array[4, float32]
-  var px_array, py_array: array[4, float32]
-  
-  # Extract SIMD values to arrays
-  vst1q_f32(px_array[0].addr, px)
-  vst1q_f32(py_array[0].addr, py)
-  
-  # Helper function for dot product squared
-  proc dot2(v: Vec2): float32 {.inline.} = dot(v, v)
-  
-  # Process each pixel individually using the scalar Bézier algorithm
-  for i in 0..3:
-    let
-      pos = vec2(px_array[i], py_array[i])
-      A = vec2(Ax, Ay)
-      B = vec2(Bx, By)
-      C = vec2(Cx, Cy)
-      
-    result_array[i] = sdBezier(pos, A, B, C)
 
-  # Load result back into SIMD register
-  result = vld1q_f32(result_array[0].addr)
-
-proc sdEllipseSimd*(px, py: float32x4, abx, aby: float32): float32x4 {.inline, raises: [].} =
-  ## SIMD version of signed distance function for ellipse
-  ## Processes 4 pixels at once
-  ## For complex mathematical operations like ellipse, we'll fall back to scalar processing
+proc sdArcSimd*(px, py: float32x4, scx, scy, ra, rb: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for arc
+  ## Processes 4 pixels at once using pure NEON SIMD operations
   
-  # For the complex ellipse algorithm with conditionals and mathematical functions
-  # like arccos, pow, etc., it's more efficient to process them individually
-  var result_array: array[4, float32]
-  var px_array, py_array: array[4, float32]
+  let
+    zero = vmovq_n_f32(0.0)
+    scx_vec = vmovq_n_f32(scx)
+    scy_vec = vmovq_n_f32(scy)
+    ra_vec = vmovq_n_f32(ra)
+    rb_vec = vmovq_n_f32(rb)
   
-  # Extract SIMD values to arrays
-  vst1q_f32(px_array[0].addr, px)
-  vst1q_f32(py_array[0].addr, py)
+  # p.x = abs(p.x) - take absolute value of x coordinate
+  let px_abs = vabsq_f32(px)
   
-  for i in 0..3:
-    let
-      pos = vec2(px_array[i], py_array[i])
-      ab = vec2(abx, aby)
-    result_array[i] = sdEllipse(pos, ab)
+  # Calculate the condition: sc.y * px_abs > sc.x * py
+  let
+    left_side = vmulq_f32(scy_vec, px_abs)   # sc.y * px_abs
+    right_side = vmulq_f32(scx_vec, py)      # sc.x * py
+    condition = vcgtq_f32(left_side, right_side)  # left > right
   
-  # Load result back into SIMD register
-  result = vld1q_f32(result_array[0].addr)
+  # Calculate length(p_mod) = sqrt(px_abs^2 + py^2) for both cases
+  let
+    px_abs_sq = vmulq_f32(px_abs, px_abs)
+    py_sq = vmulq_f32(py, py)
+    length_p_sq = vaddq_f32(px_abs_sq, py_sq)
+  
+  # sqrt approximation using vsqrtq_f32
+  when defined(arm64) or defined(aarch64):
+    let length_p = vsqrtq_f32(length_p_sq)
+  else:
+    # Fallback for older ARM processors
+    var length_array: array[4, float32]
+    vst1q_f32(length_array[0].addr, length_p_sq)
+    for i in 0..3:
+      length_array[i] = sqrt(length_array[i])
+    let length_p = vld1q_f32(length_array[0].addr)
+  
+  # Case 1 (condition true): length(p_mod - sc*ra) - rb
+  # Calculate sc * ra
+  let
+    sc_ra_x = vmulq_f32(scx_vec, ra_vec)  # sc.x * ra
+    sc_ra_y = vmulq_f32(scy_vec, ra_vec)  # sc.y * ra
+  
+  # Calculate p_mod - sc*ra
+  let
+    diff_x = vsubq_f32(px_abs, sc_ra_x)   # px_abs - sc.x*ra
+    diff_y = vsubq_f32(py, sc_ra_y)       # py - sc.y*ra
+  
+  # Calculate length(p_mod - sc*ra)
+  let
+    diff_x_sq = vmulq_f32(diff_x, diff_x)
+    diff_y_sq = vmulq_f32(diff_y, diff_y)
+    diff_length_sq = vaddq_f32(diff_x_sq, diff_y_sq)
+  
+  when defined(arm64) or defined(aarch64):
+    let diff_length = vsqrtq_f32(diff_length_sq)
+  else:
+    # Fallback for older ARM processors
+    var diff_length_array: array[4, float32]
+    vst1q_f32(diff_length_array[0].addr, diff_length_sq)
+    for i in 0..3:
+      diff_length_array[i] = sqrt(diff_length_array[i])
+    let diff_length = vld1q_f32(diff_length_array[0].addr)
+  
+  let case1_result = vsubq_f32(diff_length, rb_vec)  # length(p_mod - sc*ra) - rb
+  
+  # Case 2 (condition false): abs(length(p_mod) - ra) - rb
+  let
+    length_minus_ra = vsubq_f32(length_p, ra_vec)    # length(p_mod) - ra
+    abs_length_minus_ra = vabsq_f32(length_minus_ra) # abs(length(p_mod) - ra)
+    case2_result = vsubq_f32(abs_length_minus_ra, rb_vec)  # abs(length(p_mod) - ra) - rb
+  
+  # Select result based on condition: condition ? case1_result : case2_result
+  result = vbslq_f32(condition, case1_result, case2_result)
 
 when defined(release):
   {.pop.}
