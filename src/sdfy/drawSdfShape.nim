@@ -18,8 +18,8 @@ proc drawSdfShapeImpl*[I, T](
     mode: SDFMode = sdfModeFeatherInv
 ) {.raises: [].} =
   ## Generic signed distance function for shapes
-  ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, and pies based on params type
-  ## T: RoundedBoxParams, ChamferBoxParams, CircleParams, BezierParams, BoxParams, EllipseParams, ArcParams, ParallelogramParams, or PieParams
+  ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings based on params type
+  ## T: RoundedBoxParams, ChamferBoxParams, CircleParams, BezierParams, BoxParams, EllipseParams, ArcParams, ParallelogramParams, PieParams, or RingParams
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
@@ -46,6 +46,8 @@ proc drawSdfShapeImpl*[I, T](
         sdParallelogram(p, params.wi, params.he, params.sk)
       elif T is PieParams:
         sdPie(p, params.c, params.r)
+      elif T is RingParams:
+        sdRing(p, params.n, params.r, params.th)
       else:
         {.error: "Unsupported shape parameter type".}
 

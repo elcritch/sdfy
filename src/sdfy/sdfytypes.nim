@@ -63,6 +63,12 @@ type
     c*: Vec2  ## sin/cos of the pie's aperture
     r*: float32  ## radius
 
+  RingParams* = object
+    ## Parameters for ring SDF
+    n*: Vec2  ## sin/cos of the ring's aperture (n.x = sin, n.y = cos)
+    r*: float32  ## radius
+    th*: float32  ## thickness
+
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:

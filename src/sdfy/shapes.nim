@@ -224,3 +224,33 @@ func sdPie*(p: Vec2, c: Vec2, r: float32): float32 {.inline.} =
   
   # Return max(l, m*sign_val)
   return max(l, m * sign_val)
+
+func sdRing*(p: Vec2, n: Vec2, r: float32, th: float32): float32 {.inline.} =
+  ## Signed distance function for a ring
+  ## p: point to test
+  ## n: sin/cos of the ring's aperture (n.x = sin, n.y = cos)
+  ## r: radius
+  ## th: thickness
+  ## Returns: signed distance (negative inside, positive outside)
+  
+  # p.x = abs(p.x)
+  var p_mod = vec2(abs(p.x), p.y)
+  
+  # Apply 2x2 rotation matrix: mat2x2(n.x,n.y,-n.y,n.x) * p
+  # This rotates p by the angle defined by n
+  let rotated_p = vec2(
+    n.x * p_mod.x + n.y * p_mod.y,
+    -n.y * p_mod.x + n.x * p_mod.y
+  )
+  
+  # Calculate the two distance components
+  let
+    # abs(length(p) - r) - th*0.5
+    d1 = abs(length(rotated_p) - r) - th * 0.5
+    
+    # length(vec2(p.x, max(0.0, abs(r - p.y) - th*0.5))) * sign(p.x)
+    max_val = max(0.0, abs(r - rotated_p.y) - th * 0.5)
+    d2 = length(vec2(rotated_p.x, max_val)) * sign(rotated_p.x)
+  
+  # Return max(d1, d2)
+  return max(d1, d2)
