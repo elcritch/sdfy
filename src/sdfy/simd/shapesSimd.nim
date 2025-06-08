@@ -21,7 +21,7 @@ when allowSimd:
     import nimsimd/sse2 as nimsimdsse2
     export nimsimdsse2
 
-  elif defined(arm64):
+  elif defined(arm64) or defined(aarch64) or defined(arm):
     import ./neon/drawSdfShapeNeon
     export drawSdfShapeNeon
 

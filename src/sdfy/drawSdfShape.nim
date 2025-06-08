@@ -1,0 +1,91 @@
+import std/math, std/monotimes, std/times
+import pixie, vmath, pixie/simd
+
+import ./sdfytypes
+import ./shapes
+
+import ./simd/shapesSimd
+
+proc drawSdfShape*[I, T](
+    image: I,
+    center: Vec2,
+    wh: Vec2,
+    params: T,
+    pos: ColorRGBA,
+    neg: ColorRGBA,
+    factor: float32 = 4,
+    spread: float32 = 0.0,
+    mode: SDFMode = sdfModeFeatherInv
+) {.hasSimd, raises: [].} =
+  ## Generic signed distance function for shapes
+  ## Supports rounded boxes, chamfered boxes, and circles based on params type
+  ## T: RoundedBoxParams, ChamferBoxParams, or CircleParams
+
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      let p = vec2(x.float32, y.float32) - center
+      
+      # Select the appropriate SDF function based on parameter type
+      let sd = when T is RoundedBoxParams:
+        let b = wh / 2.0
+        sdRoundedBox(p, b, params.r)
+      elif T is ChamferBoxParams:
+        let b = wh / 2.0
+        sdChamferBox(p, b, params.chamfer)
+      elif T is CircleParams:
+        sdCircle(p, params.r)
+      elif T is BezierParams:
+        sdBezier(p, params.A, params.B, params.C)
+      elif T is BoxParams:
+        sdBox(p, params.b)
+      elif T is EllipseParams:
+        sdEllipse(p, params.ab)
+      else:
+        {.error: "Unsupported shape parameter type".}
+
+      var c: ColorRGBA = if sd < 0.0: pos else: neg
+      case mode:
+      of sdfModeClip:
+        discard
+      of sdfModeClipAA:
+        # we offset by 0.5 to make the edges blur
+        # the clamping makes the transition go by ~1 pixel
+        # then we mix the pos and neg colors based on the clamped value
+        let cl = clamp(sd + 0.5, 0.0, 1.0)
+        c = mix(pos, neg, cl)
+      of sdfModeAnnular:
+        let sd = abs(sd + factor) - factor;
+        c = if sd < 0.0: pos else: neg
+      of sdfModeAnnularAA:
+        let sd = abs(sd + factor) - factor;
+        c = if sd < 0.0: pos else: neg
+        let cl = clamp(sd + 0.5, 0.0, 1.0)
+        c = mix(pos, neg, cl)
+      of sdfModeFeather:
+        c.a = uint8(max(0.0, min(255, (factor*sd) + 127)))
+      of sdfModeFeatherInv:
+        c.a = 255 - uint8(max(0.0, min(255, (factor*sd) + 127)))
+      of sdfModeFeatherGaussian:
+        let sd = sd
+        let s = 2.2
+        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        c.a = uint8(f * 255)
+      of sdfModeDropShadow:
+        let s = 2.2
+        let sd = sd / factor * s - spread / 8.8
+        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: 255
+      of sdfModeInsetShadow:
+        let s = 2.2
+        let sd = sd / factor * s - spread / 8.8
+        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        c.a = if sd < 0.0: uint8(min(f * 255 * 6, 255)) else: 255
+      of sdfModeInsetShadowAnnular:
+        let s = 2.2
+        let sd = sd / factor * s - spread / 8.8
+        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        c.a = if sd < 0.0: uint8(min(f * 255 * 6, 255)) else: 0
+
+
+      let idx = image.dataIndex(x, y)
+      image.data[idx] = c.rgbx()
