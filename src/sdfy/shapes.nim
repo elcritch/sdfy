@@ -113,6 +113,54 @@ func sdBox*(p: Vec2, b: Vec2): float32 {.inline.} =
   let d = abs(p) - b
   return length(max(d, vec2(0.0, 0.0))) + min(max(d.x, d.y), 0.0)
 
+func sdEllipse*(p: Vec2, ab: Vec2): float32 {.inline.} =
+  ## Signed distance function for an ellipse
+  ## p: point to test
+  ## ab: ellipse semi-axes (width/2, height/2)
+  ## Returns: signed distance (negative inside, positive outside)
+  var
+    p = abs(p)
+    ab = ab
+  
+  # Swap coordinates if needed to ensure p.x <= p.y
+  if p.x > p.y:
+    p = vec2(p.y, p.x)
+    ab = vec2(ab.y, ab.x)
+  
+  let
+    l = ab.y*ab.y - ab.x*ab.x
+    m = ab.x*p.x/l
+    m2 = m*m
+    n = ab.y*p.y/l
+    n2 = n*n
+    c = (m2 + n2 - 1.0'f32) / 3.0'f32
+    c3 = c*c*c
+    q = c3 + m2*n2*2.0'f32
+    d = c3 + m2*n2
+    g = m + m*n2
+  
+  var co: float32
+  if d < 0.0'f32:
+    let
+      h = arccos(q/c3) / 3.0'f32
+      s = cos(h)
+      t = sin(h) * sqrt(3.0'f32)
+      rx = sqrt(-c*(s + t + 2.0'f32) + m2)
+      ry = sqrt(-c*(s - t + 2.0'f32) + m2)
+    co = (ry + sign(l)*rx + abs(g)/(rx*ry) - m) / 2.0'f32
+  else:
+    let
+      h = 2.0'f32*m*n*sqrt(d)
+      s = sign(q + h) * pow(abs(q + h), 1.0'f32/3.0'f32)
+      u = sign(q - h) * pow(abs(q - h), 1.0'f32/3.0'f32)
+      rx = -s - u - c*4.0'f32 + 2.0'f32*m2
+      ry = (s - u) * sqrt(3.0'f32)
+      rm = sqrt(rx*rx + ry*ry)
+    co = (ry/sqrt(rm - rx) + 2.0'f32*g/rm - m) / 2.0'f32
+  
+  let r = ab * vec2(co, sqrt(1.0'f32 - co*co))
+  return length(r - p) * sign(p.y - r.y)
+
 proc drawSdfShape*[I, T](
     image: I,
     center: Vec2,
@@ -145,6 +193,8 @@ proc drawSdfShape*[I, T](
         sdBezier(p, params.A, params.B, params.C)
       elif T is BoxParams:
         sdBox(p, params.b)
+      elif T is EllipseParams:
+        sdEllipse(p, params.ab)
       else:
         {.error: "Unsupported shape parameter type".}
 

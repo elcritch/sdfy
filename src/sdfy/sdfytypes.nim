@@ -42,6 +42,10 @@ type
     ## Parameters for box SDF
     b*: Vec2  ## box half-extents (width/2, height/2)
 
+  EllipseParams* = object
+    ## Parameters for ellipse SDF
+    ab*: Vec2  ## ellipse semi-axes (width/2, height/2)
+
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:
