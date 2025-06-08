@@ -33,6 +33,7 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 
 | Mode | With SIMD | Without SIMD | Speedup |
 |------|-----------|--------------|---------|
+| **Pixie Shadow** | **456 ms** | **476 ms** | **1.0x** |
 | Clip | 5 ms | 20 ms | 4.0x |
 | Clip AA | 6 ms | 30 ms | 5.0x |
 | Annular | 5 ms | 22 ms | 4.4x |
@@ -44,7 +45,7 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 | Inset Shadow | 8 ms | 24 ms | 3.0x |
 | Inset Shadow Annular | 7 ms | 24 ms | 3.4x |
 
-*Performance measured on rounded rectangles (300x300 image). SIMD provides 3-5x performance improvement.*
+*Performance measured on rounded rectangles (300x300 image). SIMD provides 3-5x performance improvement. **SDF functions are 15-65x faster than traditional Pixie rendering with shadows.***
 
 ## Visual Examples
 
