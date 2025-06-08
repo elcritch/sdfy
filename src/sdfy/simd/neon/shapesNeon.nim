@@ -427,45 +427,5 @@ proc drawSdfShapeNeon*[I, T](
       
       x += remainingPixels
 
-# Backwards compatibility aliases
-proc signedRoundedBoxNeon*[I](
-    image: I,
-    center: Vec2,
-    wh: Vec2,
-    r: Vec4,
-    pos: ColorRGBA, neg: ColorRGBA,
-    factor: float32 = 4.0,
-    spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeather
-) {.simd, raises: [].} =
-  ## Backwards compatibility wrapper for signedRoundedBoxNeon
-  drawSdfShapeNeon(image, center, wh, RoundedBoxParams(r: r), pos, neg, factor, spread, mode)
-
-proc signedChamferBoxNeon*[I](
-    image: I,
-    center: Vec2,
-    wh: Vec2,
-    chamfer: float32,
-    pos: ColorRGBA, neg: ColorRGBA,
-    factor: float32 = 4.0,
-    spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeather
-) {.simd, raises: [].} =
-  ## Backwards compatibility wrapper for signedChamferBoxNeon
-  drawSdfShapeNeon(image, center, wh, ChamferBoxParams(chamfer: chamfer), pos, neg, factor, spread, mode)
-
-proc signedCircleNeon*[I](
-    image: I,
-    center: Vec2,
-    wh: Vec2,  # ignored for circles, but kept for API consistency
-    r: float32,
-    pos: ColorRGBA, neg: ColorRGBA,
-    factor: float32 = 4.0,
-    spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeather
-) {.simd, raises: [].} =
-  ## Backwards compatibility wrapper for signedCircleNeon
-  drawSdfShapeNeon(image, center, wh, CircleParams(r: r), pos, neg, factor, spread, mode)
-
 when defined(release):
   {.pop.}
