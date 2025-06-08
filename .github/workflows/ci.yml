@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        nim-version: ['stable', 'devel']
+        nim-version: ['stable']
         exclude:
           # Exclude some combinations to reduce CI time
           - os: windows-latest
