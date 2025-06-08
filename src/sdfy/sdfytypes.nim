@@ -52,6 +52,12 @@ type
     ra*: float32  ## inner radius
     rb*: float32  ## thickness (outer radius difference)
 
+  ParallelogramParams* = object
+    ## Parameters for parallelogram SDF
+    wi*: float32  ## width
+    he*: float32  ## height
+    sk*: float32  ## skew
+
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:

@@ -176,3 +176,26 @@ func sdArc*(p: Vec2, sc: Vec2, ra: float32, rb: float32): float32 {.inline.} =
   else:
     # Second case: abs(length(p) - ra) - rb
     return abs(length(p_mod) - ra) - rb
+
+func sdParallelogram*(p: Vec2, wi: float32, he: float32, sk: float32): float32 {.inline.} =
+  ## Signed distance function for a parallelogram
+  ## p: point to test
+  ## wi: width
+  ## he: height  
+  ## sk: skew
+  ## Returns: signed distance (negative inside, positive outside)
+  let e = vec2(sk, he)
+  var p = if p.y < 0.0: -p else: p
+  
+  var w = p - e
+  w.x -= clamp(w.x, -wi, wi)
+  var d = vec2(dot(w, w), -w.y)
+  
+  let s = p.x * e.y - p.y * e.x
+  p = if s < 0.0: -p else: p
+  
+  var v = p - vec2(wi, 0.0)
+  v -= e * clamp(dot(v, e) / dot(e, e), -1.0, 1.0)
+  d = vec2(min(d.x, dot(v, v)), min(d.y, wi * he - abs(s)))
+  
+  return sqrt(d.x) * sign(-d.y)

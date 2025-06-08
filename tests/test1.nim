@@ -186,5 +186,27 @@ proc main() =
 
     image.writeFile(fileName)
 
+  # Test parallelograms
+  for testMode in testModes:
+    let testName = "parallelogram - " & testMode.name
+    let fileName = "tests/outputs/parallelogram_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for parallelograms, but kept for API consistency
+                  params = ParallelogramParams(
+                    wi: 80.0,   # width
+                    he: 60.0,   # height
+                    sk: 20.0    # skew
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
 for i in 0 ..< 1:
   main()
