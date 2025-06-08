@@ -16,3 +16,6 @@ Great, next implement the `sdCircle` function in `shapesSimd.nim` following the 
 Then add it to the `drawSdfShape`.
 You don't need to update the tests1.nim file. Just run `tests1_simd.nim` as it will run the SIMD versions of test1.nim automatically.
 
+## Prompt
+
+Please update the Neon SIMD `drawSdfShapeNeon` proc to match `drawSdfShape` proc. There's a couple of new `SDFMode` cases like `sdfModeAnnular. Follow the patterns in `drawSdfShapeNeon.nim` regarding Neon SIMD. The test file to run is `tests/test1_simd.nim` which runs the same tests as `test1.nim` but with SIMD. 

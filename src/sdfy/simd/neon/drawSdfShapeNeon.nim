@@ -85,7 +85,7 @@ proc drawSdfShapeNeon*[I, T](
           
           image.data[idx] = final_color
 
-      of sdfModeClipAntiAlias:
+      of sdfModeClipAA:
         # Anti-aliased clip mode: mix colors based on clamped (sd + 0.5)
         # cl = clamp(sd + 0.5, 0.0, 1.0)
         # c = mix(pos, neg, cl)
@@ -104,6 +104,64 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             cl = clamped_array[i]
+            # mix(pos, neg, cl) = pos * (1 - cl) + neg * cl
+            mixed_color = mix(pos_rgbx, neg_rgbx, cl)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color
+
+      of sdfModeAnnular:
+        # Annular mode: create ring shape
+        # sd = abs(sd + factor) - factor
+        let
+          factor_vec = vmovq_n_f32(factor)
+          offset_sd = vaddq_f32(sd_vec, factor_vec)
+          abs_offset_sd = vabsq_f32(offset_sd)
+          annular_sd = vsubq_f32(abs_offset_sd, factor_vec)
+        
+        # Extract annular sd values for color selection
+        var annular_sd_array: array[4, float32]
+        vst1q_f32(annular_sd_array[0].addr, annular_sd)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            sd = annular_sd_array[i]
+            final_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            idx = row_start + x + i
+          
+          image.data[idx] = final_color
+
+      of sdfModeAnnularAA:
+        # Anti-aliased annular mode: create ring shape with anti-aliasing
+        # sd = abs(sd + factor) - factor
+        # cl = clamp(sd + 0.5, 0.0, 1.0)
+        # c = mix(pos, neg, cl)
+        let
+          factor_vec = vmovq_n_f32(factor)
+          offset_sd = vaddq_f32(sd_vec, factor_vec)
+          abs_offset_sd = vabsq_f32(offset_sd)
+          annular_sd = vsubq_f32(abs_offset_sd, factor_vec)
+          
+          half_vec = vmovq_n_f32(0.5)
+          one_vec = vmovq_n_f32(1.0)
+          offset_annular_sd = vaddq_f32(annular_sd, half_vec)
+          clamped_low = vmaxq_f32(offset_annular_sd, zero_vec)
+          clamped = vminq_f32(clamped_low, one_vec)
+        
+        # Extract values for color selection and mixing
+        var 
+          annular_sd_array: array[4, float32]
+          clamped_array: array[4, float32]
+        vst1q_f32(annular_sd_array[0].addr, annular_sd)
+        vst1q_f32(clamped_array[0].addr, clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            sd = annular_sd_array[i]
+            cl = clamped_array[i]
+            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
             # mix(pos, neg, cl) = pos * (1 - cl) + neg * cl
             mixed_color = mix(pos_rgbx, neg_rgbx, cl)
             idx = row_start + x + i
@@ -245,6 +303,122 @@ proc drawSdfShapeNeon*[I, T](
             alpha_array[i] = uint8(alpha_val)
           else:
             alpha_array[i] = 255'u8
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            sd = sd_array[i]
+            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            alpha = alpha_array[i]
+            idx = row_start + x + i
+          
+          var final_color = base_color
+          final_color.a = alpha
+          image.data[idx] = final_color
+
+      of sdfModeInsetShadow:
+        # Inset shadow mode: transform sd and apply Gaussian with conditional alpha
+        # sd = sd / factor * s - spread / 8.8
+        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        # alpha = if sd < 0.0: min(f * 255 * 6, 255) else: 255
+        const
+          s = 2.2'f32
+          s_squared = s * s
+          two_s_squared = 2.0'f32 * s_squared
+          gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
+        
+        # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
+        let
+          factor_vec = vmovq_n_f32(factor)
+          s_vec = vmovq_n_f32(s)
+          spread_offset = vmovq_n_f32(spread / 8.8'f32)
+          # Use multiplication by reciprocal instead of division
+          factor_reciprocal = vmovq_n_f32(1.0'f32 / factor)
+          transformed_sd = vsubq_f32(
+            vmulq_f32(vmulq_f32(sd_vec, factor_reciprocal), s_vec),
+            spread_offset
+          )
+        
+        # Calculate sd^2 using SIMD for all 4 pixels
+        let sd_squared = vmulq_f32(transformed_sd, transformed_sd)
+        
+        # Extract values for exponential calculation and conditional logic
+        var 
+          sd_squared_array: array[4, float32]
+          transformed_sd_array: array[4, float32]
+        vst1q_f32(sd_squared_array[0].addr, sd_squared)
+        vst1q_f32(transformed_sd_array[0].addr, transformed_sd)
+        
+        var alpha_array: array[4, uint8]
+        for i in 0 ..< 4:
+          let
+            transformed_sd_val = transformed_sd_array[i]
+            exp_val = exp(-1.0'f32 * sd_squared_array[i] / two_s_squared)
+            f = gaussian_coeff * exp_val
+          
+          if transformed_sd_val < 0.0'f32:
+            let alpha_val = min(f * 255.0'f32 * 6.0'f32, 255.0'f32)
+            alpha_array[i] = uint8(alpha_val)
+          else:
+            alpha_array[i] = 255'u8
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            sd = sd_array[i]
+            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            alpha = alpha_array[i]
+            idx = row_start + x + i
+          
+          var final_color = base_color
+          final_color.a = alpha
+          image.data[idx] = final_color
+
+      of sdfModeInsetShadowAnnular:
+        # Inset shadow annular mode: transform sd and apply Gaussian with conditional alpha
+        # sd = sd / factor * s - spread / 8.8
+        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        # alpha = if sd < 0.0: min(f * 255 * 6, 255) else: 0
+        const
+          s = 2.2'f32
+          s_squared = s * s
+          two_s_squared = 2.0'f32 * s_squared
+          gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
+        
+        # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
+        let
+          factor_vec = vmovq_n_f32(factor)
+          s_vec = vmovq_n_f32(s)
+          spread_offset = vmovq_n_f32(spread / 8.8'f32)
+          # Use multiplication by reciprocal instead of division
+          factor_reciprocal = vmovq_n_f32(1.0'f32 / factor)
+          transformed_sd = vsubq_f32(
+            vmulq_f32(vmulq_f32(sd_vec, factor_reciprocal), s_vec),
+            spread_offset
+          )
+        
+        # Calculate sd^2 using SIMD for all 4 pixels
+        let sd_squared = vmulq_f32(transformed_sd, transformed_sd)
+        
+        # Extract values for exponential calculation and conditional logic
+        var 
+          sd_squared_array: array[4, float32]
+          transformed_sd_array: array[4, float32]
+        vst1q_f32(sd_squared_array[0].addr, sd_squared)
+        vst1q_f32(transformed_sd_array[0].addr, transformed_sd)
+        
+        var alpha_array: array[4, uint8]
+        for i in 0 ..< 4:
+          let
+            transformed_sd_val = transformed_sd_array[i]
+            exp_val = exp(-1.0'f32 * sd_squared_array[i] / two_s_squared)
+            f = gaussian_coeff * exp_val
+          
+          if transformed_sd_val < 0.0'f32:
+            let alpha_val = min(f * 255.0'f32 * 6.0'f32, 255.0'f32)
+            alpha_array[i] = uint8(alpha_val)
+          else:
+            alpha_array[i] = 0'u8
         
         # Process only the actual pixels (not the padded ones)
         for i in 0 ..< remainingPixels:
