@@ -490,5 +490,85 @@ proc sdPieSimd*(px, py: float32x4, cx, cy, r: float32): float32x4 {.inline, rais
   # Return max(l, m*sign_val)
   result = vmaxq_f32(l, m_signed)
 
+proc sdRingSimd*(px, py: float32x4, nx, ny, r, th: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for ring
+  ## Processes 4 pixels at once using pure NEON SIMD operations
+  
+  let
+    zero = vmovq_n_f32(0.0)
+    one = vmovq_n_f32(1.0)
+    neg_one = vmovq_n_f32(-1.0)
+    half = vmovq_n_f32(0.5)
+    nx_vec = vmovq_n_f32(nx)
+    ny_vec = vmovq_n_f32(ny)
+    r_vec = vmovq_n_f32(r)
+    th_vec = vmovq_n_f32(th)
+    th_half = vmovq_n_f32(th * 0.5)
+  
+  # p.x = abs(p.x)
+  let px_abs = vabsq_f32(px)
+  
+  # Apply 2x2 rotation matrix: mat2x2(n.x,n.y,-n.y,n.x) * p
+  # rotated_p.x = n.x * px_abs + n.y * py
+  # rotated_p.y = -n.y * px_abs + n.x * py
+  let
+    rotated_px = vaddq_f32(vmulq_f32(nx_vec, px_abs), vmulq_f32(ny_vec, py))
+    rotated_py = vaddq_f32(vmulq_f32(vnegq_f32(ny_vec), px_abs), vmulq_f32(nx_vec, py))
+  
+  # Calculate length(rotated_p) = sqrt(rotated_px^2 + rotated_py^2)
+  let
+    rotated_px_sq = vmulq_f32(rotated_px, rotated_px)
+    rotated_py_sq = vmulq_f32(rotated_py, rotated_py)
+    length_rotated_sq = vaddq_f32(rotated_px_sq, rotated_py_sq)
+  
+  when defined(arm64) or defined(aarch64):
+    let length_rotated = vsqrtq_f32(length_rotated_sq)
+  else:
+    # Fallback for older ARM processors
+    var length_array: array[4, float32]
+    vst1q_f32(length_array[0].addr, length_rotated_sq)
+    for i in 0..3:
+      length_array[i] = sqrt(length_array[i])
+    let length_rotated = vld1q_f32(length_array[0].addr)
+  
+  # Calculate d1 = abs(length(rotated_p) - r) - th*0.5
+  let
+    length_minus_r = vsubq_f32(length_rotated, r_vec)
+    abs_length_minus_r = vabsq_f32(length_minus_r)
+    d1 = vsubq_f32(abs_length_minus_r, th_half)
+  
+  # Calculate d2 = length(vec2(rotated_p.x, max(0.0, abs(r - rotated_p.y) - th*0.5))) * sign(rotated_p.x)
+  let
+    r_minus_py = vsubq_f32(r_vec, rotated_py)  # r - rotated_p.y
+    abs_r_minus_py = vabsq_f32(r_minus_py)     # abs(r - rotated_p.y)
+    abs_r_minus_py_minus_th_half = vsubq_f32(abs_r_minus_py, th_half)  # abs(r - rotated_p.y) - th*0.5
+    max_val = vmaxq_f32(abs_r_minus_py_minus_th_half, zero)  # max(0.0, abs(r - rotated_p.y) - th*0.5)
+  
+  # Calculate length(vec2(rotated_p.x, max_val))
+  let
+    d2_length_sq = vaddq_f32(vmulq_f32(rotated_px, rotated_px), vmulq_f32(max_val, max_val))
+  
+  when defined(arm64) or defined(aarch64):
+    let d2_length = vsqrtq_f32(d2_length_sq)
+  else:
+    # Fallback for older ARM processors
+    var d2_length_array: array[4, float32]
+    vst1q_f32(d2_length_array[0].addr, d2_length_sq)
+    for i in 0..3:
+      d2_length_array[i] = sqrt(d2_length_array[i])
+    let d2_length = vld1q_f32(d2_length_array[0].addr)
+  
+  # Calculate sign(rotated_p.x)
+  let
+    pos_mask = vcgtq_f32(rotated_px, zero)  # rotated_px > 0
+    neg_mask = vcltq_f32(rotated_px, zero)  # rotated_px < 0
+    sign_rotated_px = vbslq_f32(pos_mask, one, vbslq_f32(neg_mask, neg_one, zero))
+  
+  # d2 = d2_length * sign(rotated_p.x)
+  let d2 = vmulq_f32(d2_length, sign_rotated_px)
+  
+  # Return max(d1, d2)
+  result = vmaxq_f32(d1, d2)
+
 when defined(release):
   {.pop.}
