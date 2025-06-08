@@ -175,5 +175,183 @@ proc sdCircleSimd*(px, py: float32x4, r: float32): float32x4 {.inline, raises: [
   # Return length(p) - r
   result = vsubq_f32(length_vec, r_vec)
 
+proc sdBoxSimd*(px, py: float32x4, bx, by: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for box
+  ## Processes 4 pixels at once
+  
+  let
+    zero = vmovq_n_f32(0.0)
+    bx_vec = vmovq_n_f32(bx)
+    by_vec = vmovq_n_f32(by)
+  
+  # Calculate d = abs(p) - b
+  let
+    abs_px = vabsq_f32(px)
+    abs_py = vabsq_f32(py)
+    dx = vsubq_f32(abs_px, bx_vec)
+    dy = vsubq_f32(abs_py, by_vec)
+  
+  # max(d, 0.0)
+  let
+    max_dx = vmaxq_f32(dx, zero)
+    max_dy = vmaxq_f32(dy, zero)
+  
+  # length(max(d, 0.0)) = sqrt(max_dx^2 + max_dy^2)
+  let
+    max_dx_sq = vmulq_f32(max_dx, max_dx)
+    max_dy_sq = vmulq_f32(max_dy, max_dy)
+    length_sq = vaddq_f32(max_dx_sq, max_dy_sq)
+  
+  # sqrt approximation using vsqrtq_f32
+  when defined(arm64) or defined(aarch64):
+    let length_vec = vsqrtq_f32(length_sq)
+  else:
+    # Fallback for older ARM processors
+    var length_array: array[4, float32]
+    vst1q_f32(length_array[0].addr, length_sq)
+    for i in 0..3:
+      length_array[i] = sqrt(length_array[i])
+    let length_vec = vld1q_f32(length_array[0].addr)
+  
+  # min(max(d.x, d.y), 0.0)
+  let
+    max_d = vmaxq_f32(dx, dy)
+    min_max_d = vminq_f32(max_d, zero)
+  
+  # Return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0)
+  result = vaddq_f32(length_vec, min_max_d)
+
+proc sdBezierSimd*(px, py: float32x4, Ax, Ay, Bx, By, Cx, Cy: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for quadratic Bézier curve
+  ## Processes 4 pixels at once
+  ## For complex mathematical operations like Bézier curves, we'll fall back to scalar processing
+  
+  # For the complex Bézier curve algorithm with conditionals and mathematical functions
+  # like arccos, pow, etc., it's more efficient to process them individually
+  var result_array: array[4, float32]
+  var px_array, py_array: array[4, float32]
+  
+  # Extract SIMD values to arrays
+  vst1q_f32(px_array[0].addr, px)
+  vst1q_f32(py_array[0].addr, py)
+  
+  # Helper function for dot product squared
+  proc dot2(v: Vec2): float32 {.inline.} = dot(v, v)
+  
+  # Process each pixel individually using the scalar Bézier algorithm
+  for i in 0..3:
+    let
+      pos = vec2(px_array[i], py_array[i])
+      A = vec2(Ax, Ay)
+      B = vec2(Bx, By)
+      C = vec2(Cx, Cy)
+      
+      a = B - A
+      b = A - 2.0'f32*B + C
+      c = a * 2.0'f32
+      d = A - pos
+      kk = 1.0'f32 / dot(b, b)
+      kx = kk * dot(a, b)
+      ky = kk * (2.0'f32*dot(a, a) + dot(d, b)) / 3.0'f32
+      kz = kk * dot(d, a)
+    
+    var res = 0.0'f32
+    let
+      p = ky - kx*kx
+      p3 = p*p*p
+      q = kx*(2.0'f32*kx*kx - 3.0'f32*ky) + kz
+      h = q*q + 4.0'f32*p3
+    
+    if h >= 0.0'f32:
+      let
+        h_sqrt = sqrt(h)
+        x = vec2((h_sqrt - q) / 2.0'f32, (-h_sqrt - q) / 2.0'f32)
+        uv = vec2(
+          sign(x.x) * pow(abs(x.x), 1.0'f32/3.0'f32),
+          sign(x.y) * pow(abs(x.y), 1.0'f32/3.0'f32)
+        )
+        t = clamp(uv.x + uv.y - kx, 0.0'f32, 1.0'f32)
+      res = dot2(d + (c + b*t)*t)
+    else:
+      let
+        z = sqrt(-p)
+        v = arccos(q / (p*z*2.0'f32)) / 3.0'f32
+        m = cos(v)
+        n = sin(v) * 1.732050808'f32  # sqrt(3)
+        t1 = clamp((m + m)*z - kx, 0.0'f32, 1.0'f32)
+        t2 = clamp((-n - m)*z - kx, 0.0'f32, 1.0'f32)
+        res1 = dot2(d + (c + b*t1)*t1)
+        res2 = dot2(d + (c + b*t2)*t2)
+      res = min(res1, res2)
+    
+    result_array[i] = sqrt(res)
+  
+  # Load result back into SIMD register
+  result = vld1q_f32(result_array[0].addr)
+
+proc sdEllipseSimd*(px, py: float32x4, abx, aby: float32): float32x4 {.inline, raises: [].} =
+  ## SIMD version of signed distance function for ellipse
+  ## Processes 4 pixels at once
+  ## For complex mathematical operations like ellipse, we'll fall back to scalar processing
+  
+  # For the complex ellipse algorithm with conditionals and mathematical functions
+  # like arccos, pow, etc., it's more efficient to process them individually
+  var result_array: array[4, float32]
+  var px_array, py_array: array[4, float32]
+  
+  # Extract SIMD values to arrays
+  vst1q_f32(px_array[0].addr, px)
+  vst1q_f32(py_array[0].addr, py)
+  
+  # Process each pixel individually using the scalar ellipse algorithm
+  for i in 0..3:
+    var
+      p = abs(vec2(px_array[i], py_array[i]))
+      ab = vec2(abx, aby)
+    
+    # Swap coordinates if needed to ensure p.x <= p.y
+    if p.x > p.y:
+      p = vec2(p.y, p.x)
+      ab = vec2(ab.y, ab.x)
+    
+    let
+      l = ab.y*ab.y - ab.x*ab.x
+      m = ab.x*p.x/l
+      m2 = m*m
+      n = ab.y*p.y/l
+      n2 = n*n
+      c = (m2 + n2 - 1.0'f32) / 3.0'f32
+      c3 = c*c*c
+      q = c3 + m2*n2*2.0'f32
+      d = c3 + m2*n2
+      g = m + m*n2
+    
+    var co: float32
+    if d < 0.0'f32:
+      let
+        h = arccos(q/c3) / 3.0'f32
+        s = cos(h)
+        t = sin(h) * sqrt(3.0'f32)
+        rx = sqrt(-c*(s + t + 2.0'f32) + m2)
+        ry = sqrt(-c*(s - t + 2.0'f32) + m2)
+      co = (ry + sign(l)*rx + abs(g)/(rx*ry) - m) / 2.0'f32
+    else:
+      let
+        h = 2.0'f32*m*n*sqrt(d)
+        s = sign(q + h) * pow(abs(q + h), 1.0'f32/3.0'f32)
+        u = sign(q - h) * pow(abs(q - h), 1.0'f32/3.0'f32)
+        rx = -s - u - c*4.0'f32 + 2.0'f32*m2
+        ry = (s - u) * sqrt(3.0'f32)
+        rm = sqrt(rx*rx + ry*ry)
+      co = (ry/sqrt(rm - rx) + 2.0'f32*g/rm - m) / 2.0'f32
+    
+    let
+      r = ab * vec2(co, sqrt(1.0'f32 - co*co))
+      original_p = vec2(px_array[i], py_array[i])
+    result_array[i] = length(r - p) * sign(original_p.y - r.y)
+  
+  # Load result back into SIMD register
+  result = vld1q_f32(result_array[0].addr)
+
 when defined(release):
   {.pop.}

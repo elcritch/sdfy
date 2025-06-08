@@ -67,6 +67,12 @@ proc drawSdfShapeNeon*[I, T](
         sdChamferBoxSimd(px_vec, py_vec, b_x, b_y, params.chamfer)
       elif T is CircleParams:
         sdCircleSimd(px_vec, py_vec, params.r)
+      elif T is BoxParams:
+        sdBoxSimd(px_vec, py_vec, params.b.x, params.b.y)
+      elif T is BezierParams:
+        sdBezierSimd(px_vec, py_vec, params.A.x, params.A.y, params.B.x, params.B.y, params.C.x, params.C.y)
+      elif T is EllipseParams:
+        sdEllipseSimd(px_vec, py_vec, params.ab.x, params.ab.y)
       else:
         {.error: "Unsupported shape parameter type".}
       
