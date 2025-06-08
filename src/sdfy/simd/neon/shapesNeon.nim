@@ -9,13 +9,13 @@ when defined(release):
   {.push checks: off.}
 
 when not compiles(vabsq_f32(float32x4(0.0))):
-  func vabsq_f32*(a: float32x4): float32x4 {.header: "arm_neon.h".}
+  func vabsq_f32(a: float32x4): float32x4 {.header: "arm_neon.h".}
 when not compiles(vsqrtq_f32(float32x4(0.0))):
-  func vsqrtq_f32*(a: float32x4): float32x4 {.header: "arm_neon.h".}
+  func vsqrtq_f32(a: float32x4): float32x4 {.header: "arm_neon.h".}
 when not compiles(vcvtq_u32_f32(float32x4(0.0))):
-  func vcvtq_u32_f32*(a: float32x4): uint32x4 {.header: "arm_neon.h".}
+  func vcvtq_u32_f32(a: float32x4): uint32x4 {.header: "arm_neon.h".}
 when not compiles(vnegq_f32(float32x4(0.0))):
-  func vnegq_f32*(a: float32x4): float32x4 {.header: "arm_neon.h".}
+  func vnegq_f32(a: float32x4): float32x4 {.header: "arm_neon.h".}
 
 proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for rounded box

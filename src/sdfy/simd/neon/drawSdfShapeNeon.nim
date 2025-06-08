@@ -8,6 +8,15 @@ import ./shapesNeon
 when defined(release):
   {.push checks: off.}
 
+when not compiles(vabsq_f32(float32x4(0.0))):
+  func vabsq_f32(a: float32x4): float32x4 {.header: "arm_neon.h".}
+when not compiles(vsqrtq_f32(float32x4(0.0))):
+  func vsqrtq_f32(a: float32x4): float32x4 {.header: "arm_neon.h".}
+when not compiles(vcvtq_u32_f32(float32x4(0.0))):
+  func vcvtq_u32_f32(a: float32x4): uint32x4 {.header: "arm_neon.h".}
+when not compiles(vnegq_f32(float32x4(0.0))):
+  func vnegq_f32(a: float32x4): float32x4 {.header: "arm_neon.h".}
+
 proc drawSdfShapeNeon*[I, T](
     image: I,
     center: Vec2,
