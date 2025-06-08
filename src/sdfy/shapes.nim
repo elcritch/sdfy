@@ -65,8 +65,6 @@ proc drawSdfShape*[I, T](
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, and circles based on params type
   ## T: RoundedBoxParams, ChamferBoxParams, or CircleParams
-  let
-    b = wh / 2.0
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
@@ -74,8 +72,10 @@ proc drawSdfShape*[I, T](
       
       # Select the appropriate SDF function based on parameter type
       let sd = when T is RoundedBoxParams:
+        let b = wh / 2.0
         sdRoundedBox(p, b, params.r)
       elif T is ChamferBoxParams:
+        let b = wh / 2.0
         sdChamferBox(p, b, params.chamfer)
       elif T is CircleParams:
         sdCircle(p, params.r)
