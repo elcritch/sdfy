@@ -20,6 +20,7 @@ proc drawSdfShapeImpl*[I, T](
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings based on params type
   ## T: RoundedBoxParams, ChamferBoxParams, CircleParams, BezierParams, BoxParams, EllipseParams, ArcParams, ParallelogramParams, PieParams, or RingParams
+  mixin dataIndex
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:

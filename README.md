@@ -304,6 +304,62 @@ type SDFMode* = enum
   sdfModeAnnularAA            # Anti-aliased ring/annular shape
 ```
 
+## Image Compatibility
+
+SDFY is designed to work with multiple image types through a flexible generic interface. You can use:
+
+- **Pixie Image**: The standard `pixie.Image` type from the Pixie graphics library
+- **SdfImage**: The included `SdfImage` type for lightweight image operations
+- **Custom Image Types**: Any type that implements the required interface
+
+### Required Image Interface
+
+For an image type to work with SDFY's `drawSdfShape` function, it must provide:
+
+```nim
+# Required fields/properties:
+image.width: int       # Image width in pixels
+image.height: int      # Image height in pixels
+image.data: seq[ColorRGBX]  # Pixel data as RGBX color sequence
+
+# Required function/template:
+image.dataIndex(x, y: int): int  # Calculate array index for pixel at (x, y)
+```
+
+### Implementation Example
+
+```nim
+type
+  CustomImage* = object
+    width*, height*: int
+    data*: seq[ColorRGBX]
+
+# Implement the dataIndex template
+template dataIndex*(image: CustomImage, x, y: int): int =
+  image.width * y + x
+
+# Now you can use it with SDFY
+let myImage = CustomImage(width: 300, height: 300)
+myImage.data = newSeq[ColorRGBX](300 * 300)
+
+drawSdfShape(
+  myImage,  # Works with any compatible image type
+  center = vec2(150, 150),
+  wh = vec2(200, 200),
+  params = CircleParams(r: 100.0),
+  pos = rgba(255, 100, 100, 255),
+  neg = rgba(50, 50, 50, 255),
+  mode = sdfModeFeatherInv
+)
+```
+
+### SdfImage vs Pixie Image
+
+- **SdfImage**: Lightweight, minimal dependencies, included with SDFY
+- **Pixie Image**: Full-featured graphics library with extensive drawing capabilities, file I/O, and more
+
+Both types implement the same interface and can be used interchangeably with SDFY functions.
+
 ## Examples
 
 ### Basic Rounded Rectangle

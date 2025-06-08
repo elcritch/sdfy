@@ -22,6 +22,7 @@ proc drawSdfShapeNeon*[I, T](
   ## Generic function that supports rounded boxes, chamfer boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings
   ## Processes pixels in chunks of 4 with padding for remaining pixels
   ## T: RoundedBoxParams, ChamferBoxParams, CircleParams, BezierParams, BoxParams, EllipseParams, ArcParams, ParallelogramParams, PieParams, or RingParams
+  mixin dataIndex
   
   let
     pos_rgbx = pos.rgbx()
