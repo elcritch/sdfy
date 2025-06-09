@@ -93,3 +93,13 @@ proc copy*(image: SdfImage): SdfImage {.raises: [].} =
 
 template dataIndex*[I](image: I, x, y: int): int =
   image.width * y + x
+
+proc lerp(a, b, v: float32): float32 =
+  a * (1.0 - v) + b * v
+
+proc mix*(a, b: Color, v: Vec4): Color =
+  ## Mixes two Color colors together using simple lerp.
+  result.r = lerp(a.r, b.r, v[0])
+  result.g = lerp(a.g, b.g, v[1])
+  result.b = lerp(a.b, b.b, v[2])
+  result.a = lerp(a.a, b.a, v[3])
