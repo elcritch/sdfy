@@ -4,6 +4,7 @@ import nimsimd/hassimd, nimsimd/sse2
 
 import ../../sdfytypes
 import ./shapesSse2
+import ./fallbackShapesSse2
 
 when defined(release):
   {.push checks: off.}
@@ -26,7 +27,6 @@ proc drawSdfShapeSse2*[I, T](
   ## T: RoundedBoxParams (other shape types to be added later)
   mixin dataIndex
   
-  echo "SSE2 SIMD implemented"
   let
     pos_rgbx = pos.rgbx()
     neg_rgbx = neg.rgbx()
@@ -87,8 +87,12 @@ proc drawSdfShapeSse2*[I, T](
         sdPieSimd(px_vec, py_vec, params.c.x, params.c.y, params.r)
       elif T is RingParams:
         sdRingSimd(px_vec, py_vec, params.n.x, params.n.y, params.r, params.th)
+      elif T is BezierParams:
+        sdBezierSimd(px_vec, py_vec, params.A.x, params.A.y, params.B.x, params.B.y, params.C.x, params.C.y)
+      elif T is EllipseParams:
+        sdEllipseSimd(px_vec, py_vec, params.ab.x, params.ab.y)
       else:
-        {.error: "Unsupported shape parameter type in SSE2 implementation. BezierParams and EllipseParams use scalar fallbacks and are not yet implemented.".}
+        {.error: "Unsupported shape parameter type in SSE2 implementation."}
       
       # Extract individual values for color selection and mode processing
       var sd_array: array[4, float32]
