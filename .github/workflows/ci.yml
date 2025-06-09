@@ -29,7 +29,7 @@ jobs:
         version: ${{ matrix.nim-version }}
 
     - name: Install Atlas
-      run:
+      run: |
         git clone https://github.com/nim-lang/atlas.git
         cd atlas
         nim buildRelease
