@@ -8,7 +8,7 @@ A high-performance library implementing 2D signed distance functions (SDFs) with
 
 - **Fast SDF Implementation**: Optimized implementations of common 2D shapes
 - **Multiple Rendering Modes**: Support for various anti-aliasing and effect techniques
-- **SIMD Acceleration**: Leverages SIMD instructions for maximum performance
+- **SIMD Acceleration**: Leverages SIMD (SSE2/NEON) instructions for maximum CPU performance
 - **Pixie Integration**: Seamless integration with the Pixie graphics library
 - **Flexible API**: Easy-to-use interface for rendering SDFs to images
 
