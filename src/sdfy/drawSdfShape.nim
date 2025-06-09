@@ -88,7 +88,14 @@ proc drawSdfShapeImpl*[I, T](
           clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         )
         c = mix(posC, negC, cl).to(ColorRGBA)
-
+      of sdfModeClipBgrSubPixelAA:
+        let cl = vec4(
+          clamp(aaFactor * sd + 0.75, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.25, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0)
+        )
+        c = mix(posC, negC, cl).to(ColorRGBA)
       of sdfModeAnnular:
         let sd = abs(sd + factor) - factor;
         c = if sd < 0.0: pos else: neg
@@ -104,6 +111,16 @@ proc drawSdfShapeImpl*[I, T](
           clamp(aaFactor * sd + 0.25, 0.0, 1.0),
           clamp(aaFactor * sd + 0.5, 0.0, 1.0),
           clamp(aaFactor * sd + 0.75, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0)
+        )
+        c = mix(posC, negC, cl).to(ColorRGBA)
+      of sdfModeAnnularBgrSubPixelAA:
+        let sd = abs(sd + factor) - factor;
+        c = if sd < 0.0: pos else: neg
+        let cl = vec4(
+          clamp(aaFactor * sd + 0.75, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.25, 0.0, 1.0),
           clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         )
         c = mix(posC, negC, cl).to(ColorRGBA)
