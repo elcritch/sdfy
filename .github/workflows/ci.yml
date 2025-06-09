@@ -29,7 +29,7 @@ jobs:
         version: ${{ matrix.nim-version }}
 
     - name: Install dependencies
-      run: nimble install nimble@\#head
+      run: nimble install 'nimble@#head'
 
     - name: Install dependencies
       run: nimble install -d --feature:test
