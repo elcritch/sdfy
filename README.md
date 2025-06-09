@@ -59,7 +59,11 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 - **Medium complexity** (Rounded Box, Chamfer Box, Arc, Pie, Ring): Good SIMD optimization
 - **Complex shapes** (Ellipse, Bézier, Parallelogram): Partial SIMD optimization with scalar fallbacks for complex math
 
-## Visual Examples
+## Examples
+
+Here's a grid with all the currently supported SDF functions, with and without a dropshadow: 
+
+![All Shapes Example](data/all_shapes_grid.png)
 
 Here are examples of the different rendering modes applied to rounded rectangles:
 
