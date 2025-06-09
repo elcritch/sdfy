@@ -1,0 +1,2 @@
+--define:sdfyNoSimd
+--define:pixieNoSimd

@@ -27,7 +27,7 @@ proc drawSdfShapeImpl*[I, T](
       let p = vec2(x.float32, y.float32) - center
       
       # Select the appropriate SDF function based on parameter type
-      let sd =
+      var sd =
         when T is RoundedBoxParams:
           let b = wh / 2.0
           sdRoundedBox(p, b, params.r)
@@ -53,6 +53,7 @@ proc drawSdfShapeImpl*[I, T](
         else:
           {.error: "Unsupported shape parameter type".}
 
+      sd -= 0.25
       var c: ColorRGBA = if sd < 0.0: pos else: neg
       case mode:
       of sdfModeClip:
