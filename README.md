@@ -1,8 +1,10 @@
-# SDFY - Fast Signed Distance Functions for GUIs and Images
+# SDFY - Fast Vector Shapes *with* Shadows for GUIs and Images using SDFs
 
 ![All Shapes Example](data/all_shapes_grid.png)
 
-A high-performance library implementing 2D signed distance functions (SDFs) with multiple rendering modes and SIMD optimizations. Implemented with Nim, but compatible with C/C++.
+A high-performance library implementing 2D signed distance functions (SDFs) with multiple rendering modes and SIMD optimizations. Implemented with Nim but compatible with C/C++. Drop a note if you'd like a C API.
+
+These SDFs are targeted and tune for quickly making drop shadows for GUIs. These can be used with graphical renderers to speed up expensive drop and inset shadows.
 
 ## Features
 
