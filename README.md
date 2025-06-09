@@ -1,4 +1,4 @@
-# SDFY - Fast Vector Shapes *with* Shadows for GUIs and Images using SDFs
+# SDFY - Fast 2D Vector Shapes *with* Shadows for GUIs and Images using SDFs
 
 ![All Shapes Example](data/all_shapes_grid.png)
 
