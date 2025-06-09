@@ -29,7 +29,10 @@ jobs:
         version: ${{ matrix.nim-version }}
 
     - name: Install dependencies
-      run: nimble install -d
+      run: nimble install pixie
+
+    - name: Install dependencies
+      run: nimble install -d --feature:test
 
     - name: Run tests
       run: nimble test
