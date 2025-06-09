@@ -1,7 +1,6 @@
+# SDFY - Fast Signed Distance Functions for GUIs and Images
 
 ![All Shapes Example](data/all_shapes_grid.png)
-
-# SDFY - Signed Distance Functions
 
 A high-performance library implementing 2D signed distance functions (SDFs) with multiple rendering modes and SIMD optimizations. Implemented with Nim, but compatible with C/C++.
 
