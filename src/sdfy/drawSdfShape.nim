@@ -95,9 +95,6 @@ proc drawSdfShapeImpl*[I, T](
         let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
         if sd >= 0.0:
           c.a = uint8(min(f * 255 * 6, 255))
-        else:
-          # c.a = 255
-          discard
       of sdfModeInsetShadow:
         let s = 2.2
         let sd = sd / factor * s - spread / 8.8
