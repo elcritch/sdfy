@@ -5,21 +5,13 @@ export hassimd
 const allowSimd* = not defined(sdfyNoSimd) and not defined(tcc)
 
 when allowSimd:
-  when defined(amd64):
-    import simd/sse2
-    export sse2
-
-    when not defined(sdfyNoAvx):
-      import nimsimd/runtimecheck
-      import roundedbox/avx, roundedbox/avx2
-      export avx, avx2
-
-      let
-        cpuHasAvx* = checkInstructionSets({AVX})
-        cpuHasAvx2* = checkInstructionSets({AVX, AVX2})
-
-    import nimsimd/sse2 as nimsimdsse2
-    export nimsimdsse2
+  when defined(sdfySse2Implemented) and defined(amd64) or defined(x86_64):
+    import ./sse2/shapesSse2
+    import ./sse2/fallbackShapesSse2
+    import ./sse2/drawSdfShapeSse2
+    export drawSdfShapeSse2
+    export shapesSse2
+    export fallbackShapesSse2
 
   elif defined(arm64) or defined(aarch64) or defined(arm):
     import ./neon/shapesNeon
