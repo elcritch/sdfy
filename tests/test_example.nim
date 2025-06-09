@@ -60,7 +60,8 @@ proc main() =
   
   # Define the modes to test
   let modes = [
-    (mode: sdfModeClipAA, name: "ClipAA", factor: 12.0, spread: 0.0, posColor: pos, negColor: neg),
+    # (mode: sdfModeClipAA, name: "ClipAA", factor: 12.0, spread: 0.0, posColor: pos, negColor: neg),
+    (mode: sdfModeClipRgbSubPixelAA, name: "ClipAA", factor: 12.0, spread: 0.0, posColor: pos, negColor: neg),
     (mode: sdfModeDropShadowAA, name: "DropShadowAA", factor: 12.0, spread: 5.0, posColor: pos, negColor: rgba(0, 0, 0, 255))
   ]
   
