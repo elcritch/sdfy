@@ -27,7 +27,8 @@ proc drawSdfShapeNeon*[I, T](
     mode: SDFMode,
     factor: float32 = 4.0,
     spread: float32 = 0.0,
-    pointOffset: Vec2 = vec2(0.2, 0.2)
+    pointOffset: Vec2 = vec2(0.2, 0.2),
+    aaFactor: float32 = 1.2 # factor to multiply sd by for AA
 ) {.simd, raises: [].} =
   ## NEON SIMD optimized version of drawSdfShape
   ## Generic function that supports rounded boxes, chamfer boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings
@@ -115,13 +116,15 @@ proc drawSdfShapeNeon*[I, T](
           image.data[idx] = final_color
 
       of sdfModeClipAA:
-        # Anti-aliased clip mode: mix colors based on clamped (sd + 0.5)
-        # cl = clamp(sd + 0.5, 0.0, 1.0)
+        # Anti-aliased clip mode: mix colors based on clamped (aaFactor * sd + 0.5)
+        # cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         # c = mix(pos, neg, cl)
         let
+          aaFactor_vec = vmovq_n_f32(aaFactor)
           half_vec = vmovq_n_f32(0.5)
           one_vec = vmovq_n_f32(1.0)
-          offset_sd = vaddq_f32(sd_vec, half_vec)
+          scaled_sd = vmulq_f32(sd_vec, aaFactor_vec)
+          offset_sd = vaddq_f32(scaled_sd, half_vec)
           clamped_low = vmaxq_f32(offset_sd, zero_vec)
           clamped = vminq_f32(clamped_low, one_vec)
         
@@ -344,7 +347,7 @@ proc drawSdfShapeNeon*[I, T](
 
       of sdfModeDropShadowAA:
         # Drop shadow mode with anti-aliasing: apply color mixing first, then transform sd and apply Gaussian with conditional alpha
-        # cl = clamp(sd + 0.5, 0.0, 1.0)
+        # cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         # c = mix(pos, neg, cl)
         # sd = sd / factor * s - spread / 8.8
         # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
@@ -355,11 +358,13 @@ proc drawSdfShapeNeon*[I, T](
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
         
-        # First apply anti-aliasing: cl = clamp(sd + 0.5, 0.0, 1.0)
+        # First apply anti-aliasing: cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         let
+          aaFactor_vec = vmovq_n_f32(aaFactor)
           half_vec = vmovq_n_f32(0.5)
           one_vec = vmovq_n_f32(1.0)
-          offset_sd = vaddq_f32(sd_vec, half_vec)
+          scaled_sd = vmulq_f32(sd_vec, aaFactor_vec)
+          offset_sd = vaddq_f32(scaled_sd, half_vec)
           clamped_low = vmaxq_f32(offset_sd, zero_vec)
           clamped = vminq_f32(clamped_low, one_vec)
         

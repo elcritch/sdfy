@@ -19,7 +19,8 @@ proc drawSdfShapeSse2*[I, T](
     mode: SDFMode,
     factor: float32 = 4.0,
     spread: float32 = 0.0,
-    pointOffset: Vec2 = vec2(0.2, 0.2)
+    pointOffset: Vec2 = vec2(0.2, 0.2),
+    aaFactor: float32 = 1.2 # factor to multiply sd by for AA
 ) {.simd, raises: [].} =
   ## SSE2 SIMD optimized version of drawSdfShape
   ## Generic function that supports rounded boxes (other shapes to be added later)
@@ -110,11 +111,13 @@ proc drawSdfShapeSse2*[I, T](
           image.data[idx] = final_color
 
       of sdfModeClipAA:
-        # Anti-aliased clip mode: mix colors based on clamped (sd + 0.5)
-        # cl = clamp(sd + 0.5, 0.0, 1.0)
+        # Anti-aliased clip mode: mix colors based on clamped (aaFactor * sd + 0.5)
+        # cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         # c = mix(pos, neg, cl)
         let
-          offset_sd = mm_add_ps(sd_vec, half_vec)
+          aaFactor_vec = mm_set1_ps(aaFactor)
+          scaled_sd = mm_mul_ps(sd_vec, aaFactor_vec)
+          offset_sd = mm_add_ps(scaled_sd, half_vec)
           clamped_low = mm_max_ps(offset_sd, zero_vec)
           clamped = mm_min_ps(clamped_low, one_vec)
         
@@ -333,7 +336,7 @@ proc drawSdfShapeSse2*[I, T](
 
       of sdfModeDropShadowAA:
         # Drop shadow mode with anti-aliasing: apply color mixing first, then transform sd and apply Gaussian with conditional alpha
-        # cl = clamp(sd + 0.5, 0.0, 1.0)
+        # cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         # c = mix(pos, neg, cl)
         # sd = sd / factor * s - spread / 8.8
         # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
@@ -344,9 +347,11 @@ proc drawSdfShapeSse2*[I, T](
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
         
-        # First apply anti-aliasing: cl = clamp(sd + 0.5, 0.0, 1.0)
+        # First apply anti-aliasing: cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         let
-          offset_sd = mm_add_ps(sd_vec, half_vec)
+          aaFactor_vec = mm_set1_ps(aaFactor)
+          scaled_sd = mm_mul_ps(sd_vec, aaFactor_vec)
+          offset_sd = mm_add_ps(scaled_sd, half_vec)
           clamped_low = mm_max_ps(offset_sd, zero_vec)
           clamped = mm_min_ps(clamped_low, one_vec)
         
