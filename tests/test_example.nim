@@ -55,13 +55,13 @@ let
 proc main() =
   # Fill background with white
   let ctx = newContext(image)
-  ctx.fillStyle = rgba(255, 255, 255, 255)
+  ctx.fillStyle = rgba(255, 255, 255, 55)
   ctx.fillRect(rect(0, 0, imageWidth.float32, imageHeight.float32))
   
   # Define the modes to test
   let modes = [
     (mode: sdfModeClipAA, name: "ClipAA", factor: 12.0, spread: 0.0, posColor: pos, negColor: neg),
-    (mode: sdfModeDropShadowAA, name: "DropShadowAA", factor: 5.0, spread: 5.0, posColor: pos, negColor: rgba(0, 0, 0, 255))
+    (mode: sdfModeDropShadowAA, name: "DropShadowAA", factor: 12.0, spread: 5.0, posColor: pos, negColor: rgba(0, 0, 0, 255))
   ]
   
   # Define all shapes with their parameters
