@@ -22,7 +22,9 @@ let
 let testModes* = [
   (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeClipRgbSubPixelAA, name: "clip_rgb_sub_pixel_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   (mode: sdfModeAnnular, name: "annular", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeAnnularRgbSubPixelAA, name: "annular_rgb_sub_pixel_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   (mode: sdfModeAnnularAA, name: "annular_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   (mode: sdfModeAnnular, name: "annular_fat", factor: 10.0, spread: 10.0, posColor: pos, negColor: neg),
   (mode: sdfModeFeather, name: "feather", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),

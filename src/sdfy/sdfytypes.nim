@@ -7,6 +7,7 @@ type
     sdfModeFeatherInv
     sdfModeClip
     sdfModeClipAA
+    sdfModeClipRgbSubPixelAA
     sdfModeFeatherGaussian
     sdfModeDropShadow
     sdfModeDropShadowAA
@@ -14,6 +15,7 @@ type
     sdfModeInsetShadowAnnular
     sdfModeAnnular
     sdfModeAnnularAA
+    sdfModeAnnularRgbSubPixelAA
 
   SdfImage* = ref object
     ## Image object that holds bitmap data in premultiplied alpha RGBA format.

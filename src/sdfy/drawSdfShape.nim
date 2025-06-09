@@ -6,6 +6,16 @@ import ./shapes
 
 import ./simd/shapesSimd
 
+proc lerp(a, b, v: float32): float32 =
+  a * (1.0 - v) + b * v
+
+proc mix*(a, b: Color, v: Vec4): Color =
+  ## Mixes two Color colors together using simple lerp.
+  result.r = lerp(a.r, b.r, v[0])
+  result.g = lerp(a.g, b.g, v[1])
+  result.b = lerp(a.b, b.b, v[2])
+  result.a = lerp(a.a, b.a, v[3])
+
 proc drawSdfShapeImpl*[I, T](
     image: I,
     center: Vec2,
@@ -23,6 +33,9 @@ proc drawSdfShapeImpl*[I, T](
   ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings based on params type
   ## T: RoundedBoxParams, ChamferBoxParams, CircleParams, BezierParams, BoxParams, EllipseParams, ArcParams, ParallelogramParams, PieParams, or RingParams
   mixin dataIndex
+
+  let posC = pos.to(Color)
+  let negC = neg.to(Color)
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
@@ -64,11 +77,18 @@ proc drawSdfShapeImpl*[I, T](
         # we offset by 0.5 to make the edges blur
         # the clamping makes the transition go by ~1 pixel
         # then we mix the pos and neg colors based on the clamped value
-        # let cl = clamp(sd + 0.2499, 0.0, 1.0)
-        # let cl = clamp(1.5 * sd + 0.05, 0.0, 1.0)
-        # let cl = clamp(2 * sd + 0.5, 0.0, 1.0)
         let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
+
+      of sdfModeClipRgbSubPixelAA:
+        let cl = vec4(
+          clamp(aaFactor * sd + 0.25, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.75, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0)
+        )
+        c = mix(posC, negC, cl).to(ColorRGBA)
+
       of sdfModeAnnular:
         let sd = abs(sd + factor) - factor;
         c = if sd < 0.0: pos else: neg
@@ -77,6 +97,16 @@ proc drawSdfShapeImpl*[I, T](
         c = if sd < 0.0: pos else: neg
         let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
+      of sdfModeAnnularRgbSubPixelAA:
+        let sd = abs(sd + factor) - factor;
+        c = if sd < 0.0: pos else: neg
+        let cl = vec4(
+          clamp(aaFactor * sd + 0.25, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.75, 0.0, 1.0),
+          clamp(aaFactor * sd + 0.5, 0.0, 1.0)
+        )
+        c = mix(posC, negC, cl).to(ColorRGBA)
       of sdfModeFeather:
         c.a = uint8(max(0.0, min(255, (factor*sd) + 127)))
       of sdfModeFeatherInv:
