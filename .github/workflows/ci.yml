@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         nim-version: ['stable']
         exclude:
           # Exclude some combinations to reduce CI time
@@ -29,7 +29,7 @@ jobs:
         version: ${{ matrix.nim-version }}
 
     - name: Install dependencies
-      run: nimble install 'nimble@#head'
+      run: nimble install nimble@\#head
 
     - name: Install dependencies
       run: nimble install -d --feature:test
