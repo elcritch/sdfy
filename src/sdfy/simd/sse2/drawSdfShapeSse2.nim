@@ -70,8 +70,25 @@ proc drawSdfShapeSse2*[I, T](
           b_x = wh.x / 2.0
           b_y = wh.y / 2.0
         sdRoundedBoxSimd(px_vec, py_vec, b_x, b_y, params.r)
+      elif T is ChamferBoxParams:
+        let
+          b_x = wh.x / 2.0
+          b_y = wh.y / 2.0
+        sdChamferBoxSimd(px_vec, py_vec, b_x, b_y, params.chamfer)
+      elif T is CircleParams:
+        sdCircleSimd(px_vec, py_vec, params.r)
+      elif T is BoxParams:
+        sdBoxSimd(px_vec, py_vec, params.b.x, params.b.y)
+      elif T is ArcParams:
+        sdArcSimd(px_vec, py_vec, params.sc.x, params.sc.y, params.ra, params.rb)
+      elif T is ParallelogramParams:
+        sdParallelogramSimd(px_vec, py_vec, params.wi, params.he, params.sk)
+      elif T is PieParams:
+        sdPieSimd(px_vec, py_vec, params.c.x, params.c.y, params.r)
+      elif T is RingParams:
+        sdRingSimd(px_vec, py_vec, params.n.x, params.n.y, params.r, params.th)
       else:
-        {.error: "Only RoundedBoxParams supported in SSE2 implementation for now".}
+        {.error: "Unsupported shape parameter type in SSE2 implementation. BezierParams and EllipseParams use scalar fallbacks and are not yet implemented.".}
       
       # Extract individual values for color selection and mode processing
       var sd_array: array[4, float32]
