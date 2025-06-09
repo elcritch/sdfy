@@ -65,6 +65,13 @@ proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): tuple[first: in
   # echo "row: ", row, " counts: ", counts, " first: ", first, " last: ", last
   # echo "row: ", row, " counts: ", counts
 
+proc measureWidthRowNear*(image: Image, row: int, color: ColorRGBA): tuple[first: int, last: int, counts: int] =
+  var prev = (first: -1, last: -1, counts: 0)
+  for i in [-2, -1, 0, 1, 2]:
+    let (first, last, counts) = measureWidthRow(image, row + i, color)
+    if counts > prev.counts:
+      prev = (first, last, counts)
+  result = prev
 
 proc roundedBox() =
 
@@ -88,7 +95,7 @@ proc roundedBox() =
                   pointOffset = vec2(sdOffset, sdOffset)
                   )
 
-      let (first, last, counts) = measureWidthRow(image, 150, testMode.posColor)
+      let (first, last, counts) = measureWidthRowNear(image, 150, testMode.posColor)
       extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
     # echo "width: ", width
 
@@ -116,7 +123,7 @@ proc chamferBox() =
                   pointOffset = vec2(sdOffset, sdOffset)
                   )
 
-      let (first, last, counts) = measureWidthRow(image, 150, testMode.posColor)
+      let (first, last, counts) = measureWidthRowNear(image, 150, testMode.posColor)
       extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
     # echo "width: ", width
 
