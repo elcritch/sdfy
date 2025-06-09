@@ -562,15 +562,6 @@ drawSdfShape(
 )
 ```
 
-## Performance
-
-SDFY is designed for high performance:
-
-- **SIMD optimizations**: 3-5x performance improvement on supported platforms
-- **Efficient memory layout**: Optimized data structures for cache efficiency
-- **Minimal allocations**: Reuses memory where possible
-- **Optimized math operations**: Fast implementations of mathematical functions
-
 ## Inspiration
 
 This library is based on the excellent work by [Íñigo Quílez](https://iquilezles.org/articles/distfunctions2d/) on 2D distance functions.
