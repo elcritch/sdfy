@@ -18,7 +18,8 @@ var
   center* = vec2(image.width / 2, image.height / 2)
   pos = rgba(255, 0, 0, 255)
   neg = rgba(0, 0, 255, 255)
-  corners* = vec4(0.0, 2.0, 4.0, 8.0)
+  # corners* = vec4(0.0, 2.0, 4.0, 8.0)
+  corners* = vec4(0.0, 0.0, 0.0, 0.0)
   wh* = vec2(200.0, 200.0)
   sdOffset* = 0.0
 
@@ -91,7 +92,7 @@ proc main() =
       extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
     # echo "width: ", width
 
-    # image.writeFile(fileName)
+    image.writeFile(fileName)
 
   # # Test chamfer boxes
   # for testMode in testModes:
@@ -137,9 +138,8 @@ proc main() =
 let n = 1
 let m = 0.1
 
-for sz in [198, 199, 200, 201, 202]:
-  echo "########################################################################################\n"
-  echo "####### Tests for width: ", sz, " ########################################################\n"
+for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
+  echo "\n####### Tests for width: ", sz, " ########################################################\n"
   for i in 0 ..< n:
     wh = vec2(sz.float, sz.float)
     # sdOffset = float(i - n div 2) * m
