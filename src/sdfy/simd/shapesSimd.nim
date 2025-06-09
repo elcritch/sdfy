@@ -5,7 +5,7 @@ export hassimd
 const allowSimd* = not defined(sdfyNoSimd) and not defined(tcc)
 
 when allowSimd:
-  when defined(sdfySse2Implemented) and defined(amd64) or defined(x86_64):
+  when defined(sdfySse2Implemented) and (defined(amd64) or defined(x86_64)):
     import ./sse2/shapesSse2
     import ./sse2/fallbackShapesSse2
     import ./sse2/drawSdfShapeSse2
