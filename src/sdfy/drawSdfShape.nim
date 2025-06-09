@@ -27,30 +27,31 @@ proc drawSdfShapeImpl*[I, T](
       let p = vec2(x.float32, y.float32) - center
       
       # Select the appropriate SDF function based on parameter type
-      let sd = when T is RoundedBoxParams:
-        let b = wh / 2.0
-        sdRoundedBox(p, b, params.r)
-      elif T is ChamferBoxParams:
-        let b = wh / 2.0
-        sdChamferBox(p, b, params.chamfer)
-      elif T is CircleParams:
-        sdCircle(p, params.r)
-      elif T is BezierParams:
-        sdBezier(p, params.A, params.B, params.C)
-      elif T is BoxParams:
-        sdBox(p, params.b)
-      elif T is EllipseParams:
-        sdEllipse(p, params.ab)
-      elif T is ArcParams:
-        sdArc(p, params.sc, params.ra, params.rb)
-      elif T is ParallelogramParams:
-        sdParallelogram(p, params.wi, params.he, params.sk)
-      elif T is PieParams:
-        sdPie(p, params.c, params.r)
-      elif T is RingParams:
-        sdRing(p, params.n, params.r, params.th)
-      else:
-        {.error: "Unsupported shape parameter type".}
+      let sd =
+        when T is RoundedBoxParams:
+          let b = wh / 2.0
+          sdRoundedBox(p, b, params.r)
+        elif T is ChamferBoxParams:
+          let b = wh / 2.0
+          sdChamferBox(p, b, params.chamfer)
+        elif T is CircleParams:
+          sdCircle(p, params.r)
+        elif T is BezierParams:
+          sdBezier(p, params.A, params.B, params.C)
+        elif T is BoxParams:
+          sdBox(p, params.b)
+        elif T is EllipseParams:
+          sdEllipse(p, params.ab)
+        elif T is ArcParams:
+          sdArc(p, params.sc, params.ra, params.rb)
+        elif T is ParallelogramParams:
+          sdParallelogram(p, params.wi, params.he, params.sk)
+        elif T is PieParams:
+          sdPie(p, params.c, params.r)
+        elif T is RingParams:
+          sdRing(p, params.n, params.r, params.th)
+        else:
+          {.error: "Unsupported shape parameter type".}
 
       var c: ColorRGBA = if sd < 0.0: pos else: neg
       case mode:
