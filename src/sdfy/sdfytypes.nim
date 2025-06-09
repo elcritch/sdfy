@@ -9,6 +9,7 @@ type
     sdfModeClipAA
     sdfModeFeatherGaussian
     sdfModeDropShadow
+    sdfModeDropShadowAA
     sdfModeInsetShadow
     sdfModeInsetShadowAnnular
     sdfModeAnnular
