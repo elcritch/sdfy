@@ -28,11 +28,15 @@ jobs:
       with:
         version: ${{ matrix.nim-version }}
 
-    - name: Install dependencies
-      run: nimble install nimble@\#head
+    - name: Install Atlas
+      run:
+        git clone https://github.com/nim-lang/atlas.git
+        cd atlas
+        nim buildRelease
+        cd ../
 
     - name: Install dependencies
-      run: nimble install -d --feature:test
+      run: ./atlas/atlas install --feature:test
 
     - name: Run tests
-      run: nimble test
+      run: nim test
