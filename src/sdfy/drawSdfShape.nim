@@ -63,7 +63,10 @@ proc drawSdfShapeImpl*[I, T](
         # we offset by 0.5 to make the edges blur
         # the clamping makes the transition go by ~1 pixel
         # then we mix the pos and neg colors based on the clamped value
-        let cl = clamp(sd + 0.5, 0.0, 1.0)
+        # let cl = clamp(sd + 0.2499, 0.0, 1.0)
+        # let cl = clamp(1.5 * sd + 0.05, 0.0, 1.0)
+        # let cl = clamp(2 * sd + 0.5, 0.0, 1.0)
+        let cl = clamp(1.4 * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
       of sdfModeAnnular:
         let sd = abs(sd + factor) - factor;
