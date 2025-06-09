@@ -71,6 +71,186 @@ proc main() =
 
     image.writeFile(fileName)
 
+  # Test chamfer boxes
+  for testMode in testModes:
+    let testName = "chamfer - " & testMode.name
+    let fileName = "tests/outputs/chamfer_box_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,
+                  params = ChamferBoxParams(chamfer: 20.0),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test circles
+  for testMode in testModes:
+    let testName = "circle - " & testMode.name
+    let fileName = "tests/outputs/circle_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for circles, but kept for API consistency
+                  params = CircleParams(r: 100.0),  # 100 pixel radius
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test Bézier curves
+  for testMode in testModes:
+    let testName = "bezier - " & testMode.name
+    let fileName = "tests/outputs/bezier_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for Bézier curves, but kept for API consistency
+                  params = BezierParams(
+                    A: vec2(50.0, 100.0),   # Start point (relative to center)
+                    B: vec2(0.0, -50.0),    # Control point
+                    C: vec2(-50.0, 100.0)   # End point
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test boxes
+  for testMode in testModes:
+    let testName = "box - " & testMode.name
+    let fileName = "tests/outputs/box_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for boxes since we specify half-extents directly
+                  params = BoxParams(b: vec2(80.0, 60.0)),  # 160x120 pixel box
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test ellipses
+  for testMode in testModes:
+    let testName = "ellipse - " & testMode.name
+    let fileName = "tests/outputs/ellipse_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for ellipses since we specify semi-axes directly
+                  params = EllipseParams(ab: vec2(90.0, 60.0)),  # 180x120 pixel ellipse
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test arcs
+  for testMode in testModes:
+    let testName = "arc - " & testMode.name
+    let fileName = "tests/outputs/arc_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for arcs, but kept for API consistency
+                  params = ArcParams(
+                    sc: vec2(sin(PI/4), cos(PI/4)),  # 45 degree aperture
+                    ra: 80.0,   # inner radius
+                    rb: 20.0    # thickness
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test parallelograms
+  for testMode in testModes:
+    let testName = "parallelogram - " & testMode.name
+    let fileName = "tests/outputs/parallelogram_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for parallelograms, but kept for API consistency
+                  params = ParallelogramParams(
+                    wi: 80.0,   # width
+                    he: 60.0,   # height
+                    sk: 20.0    # skew
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test pies
+  for testMode in testModes:
+    let testName = "pie - " & testMode.name
+    let fileName = "tests/outputs/pie_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for pies, but kept for API consistency
+                  params = PieParams(
+                    c: vec2(sin(PI/3), cos(PI/3)),  # 60 degree aperture
+                    r: 80.0   # radius
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
+
+  # Test rings
+  for testMode in testModes:
+    let testName = "ring - " & testMode.name
+    let fileName = "tests/outputs/ring_" & testMode.name & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,  # wh is ignored for rings, but kept for API consistency
+                  params = RingParams(
+                    n: vec2(sin(PI/4), cos(PI/4)),  # 45 degree aperture
+                    r: 80.0,   # radius
+                    th: 20.0   # thickness
+                  ),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  mode = testMode.mode)
+
+    image.writeFile(fileName)
 
 for i in 0 ..< 1:
   main()
