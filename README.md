@@ -14,6 +14,16 @@ These SDFs are targeted and tune for quickly making drop shadows for GUIs. These
 - **Pixie Integration**: Seamless integration with the Pixie graphics library
 - **Flexible API**: Easy-to-use interface for rendering SDFs to images
 
+## How It Works
+
+Creating good looking drop and inset shadows is traditionally done using Gaussian Blur. This requires a 2D convolution which is slow even if done in X and then Y directions.
+
+It's also a bit wasteful since we know the vector shape for most basic GUI elements. Why can't we use that to reduce the computational overhead?
+
+That's where SDFs come in. They allow efficiently getting the nearest distance to a shape for any point and whether it's inside or outside the shape. We can then take this value (a linear gradient) and apply a 1D gaussian function to it.
+
+From this we get a good looking, if not perfect, drop shadow! There's a slight difference it seems between the SDF + Gaussian 1D function vs a 2D true Gaussian blur on corners.
+
 ## Supported Shapes
 
 - **Rounded Rectangle**: Fully configurable rounded rectangles with independent corner radii
