@@ -46,6 +46,8 @@ let testModes* = [
 proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): int =
 
   var counts = 0
+  var first = -1
+  var last = -1
 
   for x in 0 ..< image.width:
     let idx = image.dataIndex(x, row)
@@ -53,8 +55,12 @@ proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): int =
     let cd = c.distance(color)
     if cd < 40.0:
       counts += 1
+      if first == -1:
+        first = x
+      last = x
 
-  result = counts
+  result = last - first + 1
+  # echo "row: ", row, " counts: ", counts, " first: ", first, " last: ", last
   # echo "row: ", row, " counts: ", counts
 
 
