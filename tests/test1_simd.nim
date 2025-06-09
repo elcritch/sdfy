@@ -1,11 +1,5 @@
 include test1
 
-cpu = "amd64"
-os = "macosx"
-passC = "-target x86_64-apple-macos10.12"
-passL = "-target x86_64-apple-macos10.12"
-
-
 proc ensureNonSimdWorks() =
   echo "run non-simd tests"
 
