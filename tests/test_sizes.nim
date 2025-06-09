@@ -66,7 +66,7 @@ proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): tuple[first: in
   # echo "row: ", row, " counts: ", counts
 
 
-proc main() =
+proc roundedBox() =
 
   echo "\n### Tests for width: ", wh.x, "x", wh.y, " sdOffset: ", sdOffset, " ###\n"
 
@@ -94,21 +94,33 @@ proc main() =
 
     image.writeFile(fileName)
 
-  # # Test chamfer boxes
-  # for testMode in testModes:
-  #   let testName = "chamfer - " & testMode.name
-  #   let fileName = "tests/outputs/sizes_chamfer_box_" & testMode.name & "_wh" & $wh.x & "x" & $wh.y & ".png"
-  #   timeIt testName:
-  #     drawSdfShape(image,
-  #                 center = center,
-  #                 wh = wh,
-  #                 params = ChamferBoxParams(chamfer: 20.0),
-  #                 pos = testMode.posColor,
-  #                 neg = testMode.negColor,
-  #                 factor = testMode.factor,
-  #                 spread = testMode.spread,
-  #                 mode = testMode.mode)
-  #   image.writeFile(fileName)
+proc chamferBox() =
+
+  echo "\n### Tests for width: ", wh.x, "x", wh.y, " sdOffset: ", sdOffset, " ###\n"
+
+  # Test rounded boxes
+  for testMode in testModes:
+    let testName = "chamfer - " & testMode.name & "_" & $wh.x & "x" & $wh.y
+    let fileName = "tests/outputs/sizes_chamfer_box_" & testName & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,
+                  params = ChamferBoxParams(chamfer: 20.0.min(wh.x / 4.0)),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  mode = testMode.mode,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  pointOffset = vec2(sdOffset, sdOffset)
+                  )
+
+      let (first, last, counts) = measureWidthRow(image, 150, testMode.posColor)
+      extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
+    # echo "width: ", width
+
+    image.writeFile(fileName)
 
   # # Test circles
   # for testMode in testModes:
@@ -144,4 +156,12 @@ for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
     wh = vec2(sz.float, sz.float)
     # sdOffset = float(i - n div 2) * m
     sdOffset = 0.2
-    main()
+    roundedBox()
+
+for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
+  echo "\n####### Tests for width: ", sz, " ########################################################\n"
+  for i in 0 ..< n:
+    wh = vec2(sz.float, sz.float)
+    # sdOffset = float(i - n div 2) * m
+    sdOffset = 0.2
+    chamferBox()
