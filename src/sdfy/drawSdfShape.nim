@@ -13,9 +13,10 @@ proc drawSdfShapeImpl*[I, T](
     params: T,
     pos: ColorRGBA,
     neg: ColorRGBA,
+    mode: SDFMode = sdfModeFeatherInv,
     factor: float32 = 4,
     spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeatherInv
+    pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
 ) {.raises: [].} =
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings based on params type
@@ -24,8 +25,8 @@ proc drawSdfShapeImpl*[I, T](
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
-      let p = vec2(x.float32, y.float32) - center
-      
+      let p = vec2(x.float32, y.float32) - center + pointOffset
+
       # Select the appropriate SDF function based on parameter type
       var sd =
         when T is RoundedBoxParams:
@@ -53,7 +54,7 @@ proc drawSdfShapeImpl*[I, T](
         else:
           {.error: "Unsupported shape parameter type".}
 
-      sd -= 0.25
+      # sd -= sdOffset
       var c: ColorRGBA = if sd < 0.0: pos else: neg
       case mode:
       of sdfModeClip:
@@ -108,11 +109,12 @@ proc drawSdfShape*[I, T](
     params: T,
     pos: ColorRGBA,
     neg: ColorRGBA,
+    mode: SDFMode = sdfModeFeatherInv,
     factor: float32 = 4,
     spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeatherInv
+    pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
 ) {.hasSimd, raises: [].} =
-  drawSdfShapeImpl(image, center, wh, params, pos, neg, factor, spread, mode)
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset)
 
 proc drawSdfShapeNonSimd*[I, T](
     image: I,
@@ -121,8 +123,9 @@ proc drawSdfShapeNonSimd*[I, T](
     params: T,
     pos: ColorRGBA,
     neg: ColorRGBA,
+    mode: SDFMode = sdfModeFeatherInv,
     factor: float32 = 4,
     spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeatherInv
+    pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
 ) {.raises: [].} =
-  drawSdfShapeImpl(image, center, wh, params, pos, neg, factor, spread, mode)
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset)

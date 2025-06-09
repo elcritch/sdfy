@@ -20,6 +20,7 @@ var
   neg = rgba(0, 0, 255, 255)
   corners* = vec4(0.0, 2.0, 4.0, 8.0)
   wh* = vec2(200.0, 200.0)
+  sdOffset* = 0.0
 
 # 4 => 7
 # 10 => 19
@@ -43,7 +44,7 @@ let testModes* = [
   # (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
 ]
 
-proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): int =
+proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): tuple[first: int, last: int, counts: int] =
 
   var counts = 0
   var first = -1
@@ -59,14 +60,14 @@ proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): int =
         first = x
       last = x
 
-  result = last - first + 1
+  result = (first, last, last - first + 1)
   # echo "row: ", row, " counts: ", counts, " first: ", first, " last: ", last
   # echo "row: ", row, " counts: ", counts
 
 
 proc main() =
 
-  echo "\n### Tests for width: ", wh.x, "x", wh.y, " ###\n"
+  echo "\n### Tests for width: ", wh.x, "x", wh.y, " sdOffset: ", sdOffset, " ###\n"
 
   # Test rounded boxes
   for testMode in testModes:
@@ -80,15 +81,17 @@ proc main() =
                   params = RoundedBoxParams(r: corners),
                   pos = testMode.posColor,
                   neg = testMode.negColor,
+                  mode = testMode.mode,
                   factor = testMode.factor,
                   spread = testMode.spread,
-                  mode = testMode.mode)
+                  pointOffset = vec2(sdOffset, sdOffset)
+                  )
 
-      let width = measureWidthRow(image, 150, testMode.posColor)
-      extraInfo = "\tmeasuredWidth: " & $width & "px"
+      let (first, last, counts) = measureWidthRow(image, 150, testMode.posColor)
+      extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
     # echo "width: ", width
 
-    image.writeFile(fileName)
+    # image.writeFile(fileName)
 
   # # Test chamfer boxes
   # for testMode in testModes:
@@ -122,14 +125,23 @@ proc main() =
   #                 mode = testMode.mode)
   #   image.writeFile(fileName)
 
-wh = vec2(20.0, 20.0)
-main()
+# wh = vec2(20.0, 20.0)
+# main()
 
-wh = vec2(50.0, 50.0)
-main()
+# wh = vec2(50.0, 50.0)
+# main()
 
-wh = vec2(100.0, 100.0)
-main()
+# wh = vec2(100.0, 100.0)
+# main()
 
-wh = vec2(200.0, 200.0)
-main()
+let n = 1
+let m = 0.1
+
+for sz in [198, 199, 200, 201, 202]:
+  echo "########################################################################################\n"
+  echo "####### Tests for width: ", sz, " ########################################################\n"
+  for i in 0 ..< n:
+    wh = vec2(sz.float, sz.float)
+    # sdOffset = float(i - n div 2) * m
+    sdOffset = 0.2
+    main()
