@@ -22,10 +22,12 @@ proc drawSdfShapeNeon*[I, T](
     center: Vec2,
     wh: Vec2,
     params: T,
-    pos: ColorRGBA, neg: ColorRGBA,
+    pos: ColorRGBA,
+    neg: ColorRGBA,
+    mode: SDFMode,
     factor: float32 = 4.0,
     spread: float32 = 0.0,
-    mode: SDFMode = sdfModeFeather
+    pointOffset: Vec2 = vec2(0.2, 0.2)
 ) {.simd, raises: [].} =
   ## NEON SIMD optimized version of drawSdfShape
   ## Generic function that supports rounded boxes, chamfer boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings
@@ -42,10 +44,13 @@ proc drawSdfShapeNeon*[I, T](
     offset_vec = vmovq_n_f32(127.0)
     zero_vec = vmovq_n_f32(0.0)
     f255_vec = vmovq_n_f32(255.0)
+    # SIMD vectors for point offset
+    pointOffset_x = pointOffset.x
+    pointOffset_y = pointOffset.y
   
   for y in 0 ..< image.height:
     let
-      py_scalar = y.float32 - center_y
+      py_scalar = y.float32 - center_y + pointOffset_y
       py_vec = vmovq_n_f32(py_scalar)
       row_start = image.dataIndex(0, y)
     
@@ -60,7 +65,7 @@ proc drawSdfShapeNeon*[I, T](
       var px_array: array[4, float32]
       for i in 0..3:
         let actualX = if i < remainingPixels: x + i else: x + remainingPixels - 1
-        px_array[i] = actualX.float32 - center_x
+        px_array[i] = actualX.float32 - center_x + pointOffset_x
       
       let px_vec = vld1q_f32(px_array[0].addr)
       

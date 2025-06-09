@@ -13,7 +13,7 @@ proc drawSdfShapeImpl*[I, T](
     params: T,
     pos: ColorRGBA,
     neg: ColorRGBA,
-    mode: SDFMode = sdfModeFeatherInv,
+    mode: SDFMode,
     factor: float32 = 4,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
@@ -109,7 +109,7 @@ proc drawSdfShape*[I, T](
     params: T,
     pos: ColorRGBA,
     neg: ColorRGBA,
-    mode: SDFMode = sdfModeFeatherInv,
+    mode: SDFMode,
     factor: float32 = 4,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
@@ -123,7 +123,7 @@ proc drawSdfShapeNonSimd*[I, T](
     params: T,
     pos: ColorRGBA,
     neg: ColorRGBA,
-    mode: SDFMode = sdfModeFeatherInv,
+    mode: SDFMode,
     factor: float32 = 4,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
