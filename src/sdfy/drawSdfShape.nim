@@ -17,7 +17,7 @@ proc drawSdfShapeImpl*[I, T](
     factor: float32,
     spread: float32,
     pointOffset: Vec2, ## offset the point by this amount, corrects pixelation at edges
-    aaFactor: float32, ## factor to multiply sd by for AA
+    aaFactor: float32, ## controls how harsh the AA is applied, higher values result in a sharper transition
 ) {.raises: [].} =
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings based on params type
