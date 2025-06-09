@@ -129,6 +129,34 @@ proc chamferBox() =
 
     image.writeFile(fileName)
 
+proc circle() =
+
+  echo "\n### Tests for width: ", wh.x, "x", wh.y, " sdOffset: ", sdOffset, " ###\n"
+
+  # Test rounded boxes
+  for testMode in testModes:
+    let testName = "circle - " & testMode.name & "_" & $wh.x & "x" & $wh.y
+    let fileName = "tests/outputs/sizes_circle_" & testName & ".png"
+    
+    timeIt testName:
+      drawSdfShape(image,
+                  center = center,
+                  wh = wh,
+                  params = CircleParams(r: wh.x / 2.0),
+                  pos = testMode.posColor,
+                  neg = testMode.negColor,
+                  mode = testMode.mode,
+                  factor = testMode.factor,
+                  spread = testMode.spread,
+                  pointOffset = vec2(sdOffset, sdOffset)
+                  )
+
+      let (first, last, counts) = measureWidthRowNear(image, 150, testMode.posColor)
+      extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
+    # echo "width: ", width
+
+    image.writeFile(fileName)
+
   # # Test circles
   # for testMode in testModes:
   #   let testName = "circle - " & testMode.name
@@ -171,4 +199,5 @@ for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
     wh = vec2(sz.float, sz.float)
     # sdOffset = float(i - n div 2) * m
     sdOffset = 0.2
-    chamferBox()
+    # chamferBox()
+    circle()
