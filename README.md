@@ -1,6 +1,9 @@
-# SDFY - Signed Distance Functions for Nim
 
-A high-performance Nim library implementing 2D signed distance functions (SDFs) with multiple rendering modes and SIMD optimizations.
+![All Shapes Example](data/all_shapes_grid.png)
+
+# SDFY - Signed Distance Functions
+
+A high-performance library implementing 2D signed distance functions (SDFs) with multiple rendering modes and SIMD optimizations. Implemented with Nim, but compatible with C/C++.
 
 ## Features
 
@@ -60,10 +63,6 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 - **Complex shapes** (Ellipse, Bézier, Parallelogram): Partial SIMD optimization with scalar fallbacks for complex math
 
 ## Examples
-
-Here's a grid with all the currently supported SDF functions, with and without a dropshadow: 
-
-![All Shapes Example](data/all_shapes_grid.png)
 
 Here are examples of the different rendering modes applied to rounded rectangles:
 
