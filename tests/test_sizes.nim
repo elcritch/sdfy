@@ -51,7 +51,7 @@ proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): int =
     let idx = image.dataIndex(x, row)
     let c = image.data[idx]
     let cd = c.distance(color)
-    if cd < 1.0:
+    if cd < 40.0:
       counts += 1
 
   result = counts
