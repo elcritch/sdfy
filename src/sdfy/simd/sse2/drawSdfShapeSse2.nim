@@ -20,7 +20,7 @@ proc drawSdfShapeSse2*[I, T](
     factor: float32 = 4.0,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2),
-    aaFactor: float32 = 1.2 # factor to multiply sd by for AA
+    aaFactor: float32 = 1.2 # controls how harsh the AA is applied, higher values result in a sharper transition
 ) {.simd, raises: [].} =
   ## SSE2 SIMD optimized version of drawSdfShape
   ## Generic function that supports rounded boxes (other shapes to be added later)
@@ -31,6 +31,8 @@ proc drawSdfShapeSse2*[I, T](
   let
     pos_rgbx = pos.rgbx()
     neg_rgbx = neg.rgbx()
+    posC = pos.to(Color)
+    negC = neg.to(Color)
     center_x = center.x
     center_y = center.y
     # SSE2 constants
@@ -521,6 +523,152 @@ proc drawSdfShapeSse2*[I, T](
           var final_color = base_color
           final_color.a = alpha
           image.data[idx] = final_color
+
+      of sdfModeClipRgbSubPixelAA:
+        # RGB sub-pixel anti-aliasing mode: R=0.25, G=0.5, B=0.75, A=0.5
+        let
+          aaFactor_vec = mm_set1_ps(aaFactor)
+          # Create offset vectors for RGB channels
+          r_offset = mm_set1_ps(0.25)
+          g_offset = mm_set1_ps(0.5)
+          b_offset = mm_set1_ps(0.75)
+          a_offset = mm_set1_ps(0.5)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = mm_mul_ps(sd_vec, aaFactor_vec)
+          r_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+        mm_storeu_ps(r_array[0].addr, r_clamped)
+        mm_storeu_ps(g_array[0].addr, g_clamped)
+        mm_storeu_ps(b_array[0].addr, b_clamped)
+        mm_storeu_ps(a_array[0].addr, a_clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
+
+      of sdfModeClipBgrSubPixelAA:
+        # BGR sub-pixel anti-aliasing mode: R=0.75, G=0.5, B=0.25, A=0.5
+        let
+          aaFactor_vec = mm_set1_ps(aaFactor)
+          # Create offset vectors for BGR channels (swapped R and B)
+          r_offset = mm_set1_ps(0.75)
+          g_offset = mm_set1_ps(0.5)
+          b_offset = mm_set1_ps(0.25)
+          a_offset = mm_set1_ps(0.5)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = mm_mul_ps(sd_vec, aaFactor_vec)
+          r_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+        mm_storeu_ps(r_array[0].addr, r_clamped)
+        mm_storeu_ps(g_array[0].addr, g_clamped)
+        mm_storeu_ps(b_array[0].addr, b_clamped)
+        mm_storeu_ps(a_array[0].addr, a_clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
+
+      of sdfModeAnnularRgbSubPixelAA:
+        # Annular RGB sub-pixel anti-aliasing mode
+        let
+          offset_sd = mm_add_ps(sd_vec, factor_vec)
+          neg_offset_sd = mm_sub_ps(zero_vec, offset_sd)
+          abs_offset_sd = mm_max_ps(offset_sd, neg_offset_sd)
+          annular_sd = mm_sub_ps(abs_offset_sd, factor_vec)
+          
+          aaFactor_vec = mm_set1_ps(aaFactor)
+          # Create offset vectors for RGB channels
+          r_offset = mm_set1_ps(0.25)
+          g_offset = mm_set1_ps(0.5)
+          b_offset = mm_set1_ps(0.75)
+          a_offset = mm_set1_ps(0.5)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = mm_mul_ps(annular_sd, aaFactor_vec)
+          r_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+        mm_storeu_ps(r_array[0].addr, r_clamped)
+        mm_storeu_ps(g_array[0].addr, g_clamped)
+        mm_storeu_ps(b_array[0].addr, b_clamped)
+        mm_storeu_ps(a_array[0].addr, a_clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
+
+      of sdfModeAnnularBgrSubPixelAA:
+        # Annular BGR sub-pixel anti-aliasing mode
+        let
+          offset_sd = mm_add_ps(sd_vec, factor_vec)
+          neg_offset_sd = mm_sub_ps(zero_vec, offset_sd)
+          abs_offset_sd = mm_max_ps(offset_sd, neg_offset_sd)
+          annular_sd = mm_sub_ps(abs_offset_sd, factor_vec)
+          
+          aaFactor_vec = mm_set1_ps(aaFactor)
+          # Create offset vectors for BGR channels (swapped R and B)
+          r_offset = mm_set1_ps(0.75)
+          g_offset = mm_set1_ps(0.5)
+          b_offset = mm_set1_ps(0.25)
+          a_offset = mm_set1_ps(0.5)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = mm_mul_ps(annular_sd, aaFactor_vec)
+          r_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = mm_min_ps(mm_max_ps(mm_add_ps(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+        mm_storeu_ps(r_array[0].addr, r_clamped)
+        mm_storeu_ps(g_array[0].addr, g_clamped)
+        mm_storeu_ps(b_array[0].addr, b_clamped)
+        mm_storeu_ps(a_array[0].addr, a_clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
       
       x += remainingPixels
 

@@ -28,7 +28,7 @@ proc drawSdfShapeNeon*[I, T](
     factor: float32 = 4.0,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2),
-    aaFactor: float32 = 1.2 # factor to multiply sd by for AA
+    aaFactor: float32 = 1.2 # controls how harsh the AA is applied, higher values result in a sharper transition
 ) {.simd, raises: [].} =
   ## NEON SIMD optimized version of drawSdfShape
   ## Generic function that supports rounded boxes, chamfer boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings
@@ -39,6 +39,8 @@ proc drawSdfShapeNeon*[I, T](
   let
     pos_rgbx = pos.rgbx()
     neg_rgbx = neg.rgbx()
+    posC = pos.to(Color)
+    negC = neg.to(Color)
     center_x = center.x
     center_y = center.y
     four_vec = vmovq_n_f32(factor)
@@ -534,6 +536,159 @@ proc drawSdfShapeNeon*[I, T](
           var final_color = base_color
           final_color.a = alpha
           image.data[idx] = final_color
+
+      of sdfModeClipRgbSubPixelAA:
+        # RGB sub-pixel anti-aliasing mode: R=0.25, G=0.5, B=0.75, A=0.5
+        let
+          aaFactor_vec = vmovq_n_f32(aaFactor)
+          # Create offset vectors for RGB channels
+          r_offset = vmovq_n_f32(0.25)
+          g_offset = vmovq_n_f32(0.5)
+          b_offset = vmovq_n_f32(0.75)
+          a_offset = vmovq_n_f32(0.5)
+          one_vec = vmovq_n_f32(1.0)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = vmulq_f32(sd_vec, aaFactor_vec)
+          r_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+        vst1q_f32(r_array[0].addr, r_clamped)
+        vst1q_f32(g_array[0].addr, g_clamped)
+        vst1q_f32(b_array[0].addr, b_clamped)
+        vst1q_f32(a_array[0].addr, a_clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
+
+      of sdfModeClipBgrSubPixelAA:
+        # BGR sub-pixel anti-aliasing mode: R=0.75, G=0.5, B=0.25, A=0.5
+        let
+          aaFactor_vec = vmovq_n_f32(aaFactor)
+          # Create offset vectors for BGR channels (swapped R and B)
+          r_offset = vmovq_n_f32(0.75)
+          g_offset = vmovq_n_f32(0.5)
+          b_offset = vmovq_n_f32(0.25)
+          a_offset = vmovq_n_f32(0.5)
+          one_vec = vmovq_n_f32(1.0)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = vmulq_f32(sd_vec, aaFactor_vec)
+          r_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+        vst1q_f32(r_array[0].addr, r_clamped)
+        vst1q_f32(g_array[0].addr, g_clamped)
+        vst1q_f32(b_array[0].addr, b_clamped)
+        vst1q_f32(a_array[0].addr, a_clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
+
+      of sdfModeAnnularRgbSubPixelAA:
+        # Annular RGB sub-pixel anti-aliasing mode
+        let
+          factor_vec = vmovq_n_f32(factor)
+          offset_sd = vaddq_f32(sd_vec, factor_vec)
+          abs_offset_sd = vabsq_f32(offset_sd)
+          annular_sd = vsubq_f32(abs_offset_sd, factor_vec)
+          
+          aaFactor_vec = vmovq_n_f32(aaFactor)
+          # Create offset vectors for RGB channels
+          r_offset = vmovq_n_f32(0.25)
+          g_offset = vmovq_n_f32(0.5)
+          b_offset = vmovq_n_f32(0.75)
+          a_offset = vmovq_n_f32(0.5)
+          one_vec = vmovq_n_f32(1.0)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = vmulq_f32(annular_sd, aaFactor_vec)
+          r_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+          annular_sd_array: array[4, float32]
+        vst1q_f32(r_array[0].addr, r_clamped)
+        vst1q_f32(g_array[0].addr, g_clamped)
+        vst1q_f32(b_array[0].addr, b_clamped)
+        vst1q_f32(a_array[0].addr, a_clamped)
+        vst1q_f32(annular_sd_array[0].addr, annular_sd)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            sd = annular_sd_array[i]
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
+
+      of sdfModeAnnularBgrSubPixelAA:
+        # Annular BGR sub-pixel anti-aliasing mode
+        let
+          factor_vec = vmovq_n_f32(factor)
+          offset_sd = vaddq_f32(sd_vec, factor_vec)
+          abs_offset_sd = vabsq_f32(offset_sd)
+          annular_sd = vsubq_f32(abs_offset_sd, factor_vec)
+          
+          aaFactor_vec = vmovq_n_f32(aaFactor)
+          # Create offset vectors for BGR channels (swapped R and B)
+          r_offset = vmovq_n_f32(0.75)
+          g_offset = vmovq_n_f32(0.5)
+          b_offset = vmovq_n_f32(0.25)
+          a_offset = vmovq_n_f32(0.5)
+          one_vec = vmovq_n_f32(1.0)
+          
+          # Calculate per-channel clamped values
+          scaled_sd = vmulq_f32(annular_sd, aaFactor_vec)
+          r_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, r_offset), zero_vec), one_vec)
+          g_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, g_offset), zero_vec), one_vec)
+          b_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, b_offset), zero_vec), one_vec)
+          a_clamped = vminq_f32(vmaxq_f32(vaddq_f32(scaled_sd, a_offset), zero_vec), one_vec)
+        
+        # Extract values for color mixing
+        var 
+          r_array, g_array, b_array, a_array: array[4, float32]
+        vst1q_f32(r_array[0].addr, r_clamped)
+        vst1q_f32(g_array[0].addr, g_clamped)
+        vst1q_f32(b_array[0].addr, b_clamped)
+        vst1q_f32(a_array[0].addr, a_clamped)
+        
+        # Process only the actual pixels (not the padded ones)
+        for i in 0 ..< remainingPixels:
+          let
+            cl = vec4(r_array[i], g_array[i], b_array[i], a_array[i])
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
+            idx = row_start + x + i
+          
+          image.data[idx] = mixed_color.rgbx()
       
       x += remainingPixels
 
