@@ -16,7 +16,8 @@ proc drawSdfShapeImpl*[I, T](
     mode: SDFMode,
     factor: float32 = 4,
     spread: float32 = 0.0,
-    pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
+    pointOffset: Vec2, ## offset the point by this amount, corrects pixelation at edges
+    aaFactor: float32, ## factor to multiply sd by for AA
 ) {.raises: [].} =
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings based on params type
@@ -66,7 +67,7 @@ proc drawSdfShapeImpl*[I, T](
         # let cl = clamp(sd + 0.2499, 0.0, 1.0)
         # let cl = clamp(1.5 * sd + 0.05, 0.0, 1.0)
         # let cl = clamp(2 * sd + 0.5, 0.0, 1.0)
-        let cl = clamp(1.4 * sd + 0.5, 0.0, 1.0)
+        let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
       of sdfModeAnnular:
         let sd = abs(sd + factor) - factor;
@@ -74,7 +75,7 @@ proc drawSdfShapeImpl*[I, T](
       of sdfModeAnnularAA:
         let sd = abs(sd + factor) - factor;
         c = if sd < 0.0: pos else: neg
-        let cl = clamp(sd + 0.5, 0.0, 1.0)
+        let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
       of sdfModeFeather:
         c.a = uint8(max(0.0, min(255, (factor*sd) + 127)))
@@ -92,7 +93,7 @@ proc drawSdfShapeImpl*[I, T](
         c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: c.a
       of sdfModeDropShadowAA:
         let s = 2.2
-        let cl = clamp(sd + 0.5, 0.0, 1.0)
+        let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
         let sd = sd / factor * s - spread / 8.8
         let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
@@ -126,8 +127,9 @@ proc drawSdfShape*[I, T](
     factor: float32 = 4,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
+    aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
 ) {.hasSimd, raises: [].} =
-  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset)
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor)
 
 proc drawSdfShapeNonSimd*[I, T](
     image: I,
@@ -140,5 +142,6 @@ proc drawSdfShapeNonSimd*[I, T](
     factor: float32 = 4,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
+    aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
 ) {.raises: [].} =
-  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset)
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor)
