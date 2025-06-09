@@ -64,37 +64,37 @@ A high-performance Nim library implementing 2D signed distance functions (SDFs) 
 Here are examples of the different rendering modes applied to rounded rectangles:
 
 ### Clip Mode (Sharp Edges)
-![Clip Mode](tests/outputs/rounded_box_clip.png)
+![Clip Mode](data/rounded_box_clip.png)
 
 ### Clip AA Mode (Anti-aliased Edges)
-![Clip AA Mode](tests/outputs/rounded_box_clip_aa.png)
+![Clip AA Mode](data/rounded_box_clip_aa.png)
 
 ### Annular Mode (Ring Shape)
-![Annular Mode](tests/outputs/rounded_box_annular.png)
+![Annular Mode](data/rounded_box_annular.png)
 
 ### Annular AA Mode (Anti-aliased Ring)
-![Annular AA Mode](tests/outputs/rounded_box_annular_aa.png)
+![Annular AA Mode](data/rounded_box_annular_aa.png)
 
 ### Feather Mode (Standard Anti-aliasing)
-![Feather Mode](tests/outputs/rounded_box_feather.png)
+![Feather Mode](data/rounded_box_feather.png)
 
 ### Feather Inverse Mode (Inverted Anti-aliasing)
-![Feather Inverse Mode](tests/outputs/rounded_box_feather_inv.png)
+![Feather Inverse Mode](data/rounded_box_feather_inv.png)
 
 ### Feather Gaussian Mode (Gaussian Anti-aliasing)
-![Feather Gaussian Mode](tests/outputs/rounded_box_feather_gaussian.png)
+![Feather Gaussian Mode](data/rounded_box_feather_gaussian.png)
 
 ### Drop Shadow Mode
-![Drop Shadow Mode](tests/outputs/rounded_box_drop_shadow.png)
+![Drop Shadow Mode](data/rounded_box_drop_shadow.png)
 
 ### Inset Shadow Mode
-![Inset Shadow Mode](tests/outputs/rounded_box_inset_shadow.png)
+![Inset Shadow Mode](data/rounded_box_inset_shadow.png)
 
 ### Inset Shadow Annular Mode
-![Inset Shadow Annular Mode](tests/outputs/rounded_box_inset_shadow_annular.png)
+![Inset Shadow Annular Mode](data/rounded_box_inset_shadow_annular.png)
 
 ### Pixie Comparison (Traditional Graphics)
-![Pixie Comparison](tests/outputs/rounded_box_pixie.png)
+![Pixie Comparison](data/rounded_box_pixie.png)
 
 ## Installation
 
