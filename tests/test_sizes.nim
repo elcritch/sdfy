@@ -18,8 +18,8 @@ var
   center* = vec2(image.width / 2, image.height / 2)
   pos = rgba(255, 0, 0, 255)
   neg = rgba(0, 0, 255, 255)
-  # corners* = vec4(0.0, 2.0, 4.0, 8.0)
-  corners* = vec4(0.0, 0.0, 0.0, 0.0)
+  corners* = vec4(0.0, 2.0, 4.0, 8.0)
+  # corners* = vec4(0.0, 0.0, 0.0, 0.0)
   wh* = vec2(200.0, 200.0)
   sdOffset* = 0.0
 
@@ -30,8 +30,8 @@ var
 let testModes* = [
   (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-  (mode: sdfModeAnnular, name: "annular", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-  (mode: sdfModeAnnularAA, name: "annular_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeAnnular, name: "annular", factor: 3.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeAnnularAA, name: "annular_aa", factor: 3.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_fat", factor: 10.0, spread: 10.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_fatter", factor: 20.0, spread: 10.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_small", factor: 1.0, spread: 10.0, posColor: pos, negColor: neg),
@@ -45,7 +45,7 @@ let testModes* = [
   # (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
 ]
 
-proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): tuple[first: int, last: int, counts: int] =
+proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): tuple[first: int, last: int, width: int, counts: int] =
 
   var counts = 0
   var first = -1
@@ -61,16 +61,16 @@ proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): tuple[first: in
         first = x
       last = x
 
-  result = (first, last, last - first + 1)
+  result = (first, last, last - first + 1, counts)
   # echo "row: ", row, " counts: ", counts, " first: ", first, " last: ", last
   # echo "row: ", row, " counts: ", counts
 
-proc measureWidthRowNear*(image: Image, row: int, color: ColorRGBA): tuple[first: int, last: int, counts: int] =
-  var prev = (first: -1, last: -1, counts: 0)
+proc measureWidthRowNear*(image: Image, row: int, color: ColorRGBA): tuple[first: int, last: int, width: int, counts: int] =
+  var prev = (first: -1, last: -1, width: 0, counts: 0)
   for i in [-2, -1, 0, 1, 2]:
-    let (first, last, counts) = measureWidthRow(image, row + i, color)
-    if counts > prev.counts:
-      prev = (first, last, counts)
+    let (first, last, width, counts) = measureWidthRow(image, row + i, color)
+    if width > prev.width:
+      prev = (first, last, width, counts)
   result = prev
 
 proc roundedBox() =
@@ -95,8 +95,8 @@ proc roundedBox() =
                   pointOffset = vec2(sdOffset, sdOffset)
                   )
 
-      let (first, last, counts) = measureWidthRowNear(image, 150, testMode.posColor)
-      extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
+      let (first, last, width, counts) = measureWidthRowNear(image, 150, testMode.posColor)
+      extraInfo = "\tmeasuredWidth: " & $width & "px, first: " & $first & " counts: " & $counts
     # echo "width: ", width
 
     image.writeFile(fileName)
@@ -123,8 +123,8 @@ proc chamferBox() =
                   pointOffset = vec2(sdOffset, sdOffset)
                   )
 
-      let (first, last, counts) = measureWidthRowNear(image, 150, testMode.posColor)
-      extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
+      let (first, last, width, counts) = measureWidthRowNear(image, 150, testMode.posColor)
+      extraInfo = "\tmeasuredWidth: " & $width & "px, first: " & $first & " counts: " & $counts
     # echo "width: ", width
 
     image.writeFile(fileName)
@@ -151,8 +151,8 @@ proc circle() =
                   pointOffset = vec2(sdOffset, sdOffset)
                   )
 
-      let (first, last, counts) = measureWidthRowNear(image, 150, testMode.posColor)
-      extraInfo = "\tmeasuredWidth: " & $counts & "px, first: " & $first
+      let (first, last, width, counts) = measureWidthRowNear(image, 150, testMode.posColor)
+      extraInfo = "\tmeasuredWidth: " & $width & "px, first: " & $first & " counts: " & $counts
     # echo "width: ", width
 
     image.writeFile(fileName)

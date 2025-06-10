@@ -27,6 +27,10 @@ proc drawSdfShapeImpl*[I, T](
   let posC = pos.to(Color)
   let negC = neg.to(Color)
 
+  var factor = factor
+  if mode in [sdfModeAnnular, sdfModeAnnularAA, sdfModeAnnularRgbSubPixelAA, sdfModeAnnularBgrSubPixelAA]:
+    factor = factor * 0.5
+
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let p = vec2(x.float32, y.float32) - center + pointOffset
