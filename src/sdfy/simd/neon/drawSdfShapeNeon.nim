@@ -43,13 +43,19 @@ proc drawSdfShapeNeon*[I, T](
     negC = neg.to(Color)
     center_x = center.x
     center_y = center.y
+    # Point offset constants
+    pointOffset_x = pointOffset.x
+    pointOffset_y = pointOffset.y
+  
+  var factor = factor
+  if mode in [sdfModeAnnular, sdfModeAnnularAA, sdfModeAnnularRgbSubPixelAA, sdfModeAnnularBgrSubPixelAA]:
+    factor = factor * 0.5
+  
+  let
     four_vec = vmovq_n_f32(factor)
     offset_vec = vmovq_n_f32(127.0)
     zero_vec = vmovq_n_f32(0.0)
     f255_vec = vmovq_n_f32(255.0)
-    # SIMD vectors for point offset
-    pointOffset_x = pointOffset.x
-    pointOffset_y = pointOffset.y
   
   for y in 0 ..< image.height:
     let

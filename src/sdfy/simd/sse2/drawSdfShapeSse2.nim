@@ -35,6 +35,15 @@ proc drawSdfShapeSse2*[I, T](
     negC = neg.to(Color)
     center_x = center.x
     center_y = center.y
+    # Point offset constants
+    pointOffset_x = pointOffset.x
+    pointOffset_y = pointOffset.y
+  
+  var factor = factor
+  if mode in [sdfModeAnnular, sdfModeAnnularAA, sdfModeAnnularRgbSubPixelAA, sdfModeAnnularBgrSubPixelAA]:
+    factor = factor * 0.5
+  
+  let
     # SSE2 constants
     zero_vec = mm_setzero_ps()
     factor_vec = mm_set1_ps(factor)
@@ -42,9 +51,6 @@ proc drawSdfShapeSse2*[I, T](
     f255_vec = mm_set1_ps(255.0)
     half_vec = mm_set1_ps(0.5)
     one_vec = mm_set1_ps(1.0)
-    # Point offset constants
-    pointOffset_x = pointOffset.x
-    pointOffset_y = pointOffset.y
   
   for y in 0 ..< image.height:
     let
