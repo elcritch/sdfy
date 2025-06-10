@@ -30,8 +30,8 @@ var
 let testModes* = [
   (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-  (mode: sdfModeAnnular, name: "annular", factor: 3.0, spread: 0.0, posColor: pos, negColor: neg),
-  (mode: sdfModeAnnularAA, name: "annular_aa", factor: 3.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeAnnular, name: "annular", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeAnnularAA, name: "annular_aa", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_fat", factor: 10.0, spread: 10.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_fatter", factor: 20.0, spread: 10.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_small", factor: 1.0, spread: 10.0, posColor: pos, negColor: neg),
