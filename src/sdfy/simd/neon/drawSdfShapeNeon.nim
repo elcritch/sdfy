@@ -28,7 +28,8 @@ proc drawSdfShapeNeon*[I, T](
     factor: float32 = 4.0,
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2),
-    aaFactor: float32 = 1.2 # controls how harsh the AA is applied, higher values result in a sharper transition
+    aaFactor: float32 = 1.2, # controls how harsh the AA is applied, higher values result in a sharper transition
+    stdDevFactor: float32 = 1/2.2 # controls the standard deviation of the Gaussian blur, higher values result in a softer transition
 ) {.simd, raises: [].} =
   ## NEON SIMD optimized version of drawSdfShape
   ## Generic function that supports rounded boxes, chamfer boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings
@@ -263,8 +264,8 @@ proc drawSdfShapeNeon*[I, T](
       of sdfModeFeatherGaussian:
         # Gaussian feathered mode: calculate Gaussian alpha values
         # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
-        const
-          s = 2.2'f32
+        let
+          s = stdDevFactor
           s_squared = s * s
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
@@ -298,48 +299,52 @@ proc drawSdfShapeNeon*[I, T](
 
       of sdfModeDropShadow:
         # Drop shadow mode: transform sd and apply Gaussian with conditional alpha
-        # sd = sd / factor * s - spread / 8.8
-        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
-        # alpha = if sd > 0.0: min(f * 255 * 6, 255) else: 255
-        const
-          s = 2.2'f32
+        # sd = sd - spread + 1
+        # x = sd / (factor + 0.5)
+        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+        # alpha = if sd > 0.0: min(f * 255 * 1.1, 255) else: alpha
+        let
+          s = stdDevFactor
           s_squared = s * s
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
         
-        # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
+        # Transform sd values using SIMD: sd = sd - spread + 1
         let
-          s_vec = vmovq_n_f32(s)
-          spread_offset = vmovq_n_f32(spread / 8.8'f32)
-          # Use multiplication by reciprocal instead of division
-          factor_reciprocal = vmovq_n_f32(1.0'f32 / factor)
-          transformed_sd = vsubq_f32(
-            vmulq_f32(vmulq_f32(sd_vec, factor_reciprocal), s_vec),
-            spread_offset
-          )
+          spread_vec = vmovq_n_f32(spread)
+          one_vec = vmovq_n_f32(1.0)
+          transformed_sd = vaddq_f32(vsubq_f32(sd_vec, spread_vec), one_vec)
         
-        # Calculate sd^2 using SIMD for all 4 pixels
-        let sd_squared = vmulq_f32(transformed_sd, transformed_sd)
+        # Calculate x = sd / (factor + 0.5) using SIMD
+        let
+          factor_plus_half = vmovq_n_f32(factor + 0.5)
+          # Use multiplication by reciprocal instead of division
+          factor_reciprocal = vmovq_n_f32(1.0'f32 / (factor + 0.5))
+          x_vec = vmulq_f32(transformed_sd, factor_reciprocal)
+        
+        # Calculate x^2 using SIMD for all 4 pixels
+        let x_squared = vmulq_f32(x_vec, x_vec)
         
         # Extract values for exponential calculation and conditional logic
         var 
-          sd_squared_array: array[4, float32]
+          x_squared_array: array[4, float32]
           transformed_sd_array: array[4, float32]
-        vst1q_f32(sd_squared_array[0].addr, sd_squared)
+        vst1q_f32(x_squared_array[0].addr, x_squared)
         vst1q_f32(transformed_sd_array[0].addr, transformed_sd)
         
         var alpha_array: array[4, uint8]
         for i in 0 ..< 4:
           let
             transformed_sd_val = transformed_sd_array[i]
-            exp_val = exp(-1.0'f32 * sd_squared_array[i] / two_s_squared)
+            exp_val = exp(-1.0'f32 * x_squared_array[i] / two_s_squared)
             f = gaussian_coeff * exp_val
           
           if transformed_sd_val > 0.0'f32:
-            let alpha_val = min(f * 255.0'f32 * 6.0'f32, 255.0'f32)
+            let alpha_val = min(f * 255.0'f32 * 1.1'f32, 255.0'f32)
             alpha_array[i] = uint8(alpha_val)
           else:
-            alpha_array[i] = 255'u8
+            # Use original alpha
+            alpha_array[i] = if sd_array[i] < 0.0: pos.a else: neg.a
         
         # Process only the actual pixels (not the padded ones)
         for i in 0 ..< remainingPixels:
@@ -357,11 +362,12 @@ proc drawSdfShapeNeon*[I, T](
         # Drop shadow mode with anti-aliasing: apply color mixing first, then transform sd and apply Gaussian with conditional alpha
         # cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         # c = mix(pos, neg, cl)
-        # sd = sd / factor * s - spread / 8.8
-        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
-        # if sd >= 0.0: alpha = min(f * 255 * 6, 255)
-        const
-          s = 2.2'f32
+        # sd = sd - spread + 1
+        # x = sd / (factor + 0.5)
+        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+        # if sd >= 0.0: alpha = min(f * 255 * 1.1, 255)
+        let
+          s = stdDevFactor
           s_squared = s * s
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
@@ -380,36 +386,35 @@ proc drawSdfShapeNeon*[I, T](
         var clamped_array: array[4, float32]
         vst1q_f32(clamped_array[0].addr, clamped)
         
-        # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
+        # Transform sd values using SIMD: sd = sd - spread + 1
         let
-          s_vec = vmovq_n_f32(s)
-          spread_offset = vmovq_n_f32(spread / 8.8'f32)
-          # Use multiplication by reciprocal instead of division
-          factor_reciprocal = vmovq_n_f32(1.0'f32 / factor)
-          transformed_sd = vsubq_f32(
-            vmulq_f32(vmulq_f32(sd_vec, factor_reciprocal), s_vec),
-            spread_offset
-          )
+          spread_vec = vmovq_n_f32(spread)
+          transformed_sd = vaddq_f32(vsubq_f32(sd_vec, spread_vec), one_vec)
         
-        # Calculate sd^2 using SIMD for all 4 pixels
-        let sd_squared = vmulq_f32(transformed_sd, transformed_sd)
+        # Calculate x = sd / (factor + 0.5) using SIMD
+        let
+          factor_reciprocal = vmovq_n_f32(1.0'f32 / (factor + 0.5))
+          x_vec = vmulq_f32(transformed_sd, factor_reciprocal)
+        
+        # Calculate x^2 using SIMD for all 4 pixels
+        let x_squared = vmulq_f32(x_vec, x_vec)
         
         # Extract values for exponential calculation and conditional logic
         var 
-          sd_squared_array: array[4, float32]
+          x_squared_array: array[4, float32]
           transformed_sd_array: array[4, float32]
-        vst1q_f32(sd_squared_array[0].addr, sd_squared)
+        vst1q_f32(x_squared_array[0].addr, x_squared)
         vst1q_f32(transformed_sd_array[0].addr, transformed_sd)
         
         var alpha_array: array[4, uint8]
         for i in 0 ..< 4:
           let
             transformed_sd_val = transformed_sd_array[i]
-            exp_val = exp(-1.0'f32 * sd_squared_array[i] / two_s_squared)
+            exp_val = exp(-1.0'f32 * x_squared_array[i] / two_s_squared)
             f = gaussian_coeff * exp_val
           
           if transformed_sd_val >= 0.0'f32:
-            let alpha_val = min(f * 255.0'f32 * 6.0'f32, 255.0'f32)
+            let alpha_val = min(f * 255.0'f32 * 1.1'f32, 255.0'f32)
             alpha_array[i] = uint8(alpha_val)
           else:
             # Don't modify alpha for negative sd values in AA mode
@@ -431,48 +436,41 @@ proc drawSdfShapeNeon*[I, T](
 
       of sdfModeInsetShadow:
         # Inset shadow mode: transform sd and apply Gaussian with conditional alpha
-        # sd = sd / factor * s - spread / 8.8
-        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
-        # alpha = if sd < 0.0: min(f * 255 * 6, 255) else: 255
-        const
-          s = 2.2'f32
+        # x = sd / factor
+        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+        # alpha = if sd < 0.0: min(f * 255 * 1.1, 255) else: discard
+        let
+          s = stdDevFactor
           s_squared = s * s
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
         
-        # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
+        # Calculate x = sd / factor using SIMD
         let
-          s_vec = vmovq_n_f32(s)
-          spread_offset = vmovq_n_f32(spread / 8.8'f32)
-          # Use multiplication by reciprocal instead of division
           factor_reciprocal = vmovq_n_f32(1.0'f32 / factor)
-          transformed_sd = vsubq_f32(
-            vmulq_f32(vmulq_f32(sd_vec, factor_reciprocal), s_vec),
-            spread_offset
-          )
+          x_vec = vmulq_f32(sd_vec, factor_reciprocal)
         
-        # Calculate sd^2 using SIMD for all 4 pixels
-        let sd_squared = vmulq_f32(transformed_sd, transformed_sd)
+        # Calculate x^2 using SIMD for all 4 pixels
+        let x_squared = vmulq_f32(x_vec, x_vec)
         
         # Extract values for exponential calculation and conditional logic
         var 
-          sd_squared_array: array[4, float32]
-          transformed_sd_array: array[4, float32]
-        vst1q_f32(sd_squared_array[0].addr, sd_squared)
-        vst1q_f32(transformed_sd_array[0].addr, transformed_sd)
+          x_squared_array: array[4, float32]
+        vst1q_f32(x_squared_array[0].addr, x_squared)
         
         var alpha_array: array[4, uint8]
         for i in 0 ..< 4:
           let
-            transformed_sd_val = transformed_sd_array[i]
-            exp_val = exp(-1.0'f32 * sd_squared_array[i] / two_s_squared)
+            sd_val = sd_array[i]
+            exp_val = exp(-1.0'f32 * x_squared_array[i] / two_s_squared)
             f = gaussian_coeff * exp_val
           
-          if transformed_sd_val < 0.0'f32:
-            let alpha_val = min(f * 255.0'f32 * 6.0'f32, 255.0'f32)
+          if sd_val < 0.0'f32:
+            let alpha_val = min(f * 255.0'f32 * 1.1'f32, 255.0'f32)
             alpha_array[i] = uint8(alpha_val)
           else:
-            alpha_array[i] = 255'u8
+            # Don't modify alpha for positive sd values
+            alpha_array[i] = if sd_val < 0.0: pos.a else: neg.a
         
         # Process only the actual pixels (not the padded ones)
         for i in 0 ..< remainingPixels:
@@ -483,50 +481,43 @@ proc drawSdfShapeNeon*[I, T](
             idx = row_start + x + i
           
           var final_color = base_color
-          final_color.a = alpha
+          if sd < 0.0:
+            final_color.a = alpha
           image.data[idx] = final_color
 
       of sdfModeInsetShadowAnnular:
         # Inset shadow annular mode: transform sd and apply Gaussian with conditional alpha
-        # sd = sd / factor * s - spread / 8.8
-        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
-        # alpha = if sd < 0.0: min(f * 255 * 6, 255) else: 0
-        const
-          s = 2.2'f32
+        # x = sd / factor
+        # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+        # alpha = if sd < 0.0: min(f * 255 * 1.1, 255) else: 0
+        let
+          s = stdDevFactor
           s_squared = s * s
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
         
-        # Transform sd values using SIMD: sd = sd / factor * s - spread / 8.8
+        # Calculate x = sd / factor using SIMD
         let
-          s_vec = vmovq_n_f32(s)
-          spread_offset = vmovq_n_f32(spread / 8.8'f32)
-          # Use multiplication by reciprocal instead of division
           factor_reciprocal = vmovq_n_f32(1.0'f32 / factor)
-          transformed_sd = vsubq_f32(
-            vmulq_f32(vmulq_f32(sd_vec, factor_reciprocal), s_vec),
-            spread_offset
-          )
+          x_vec = vmulq_f32(sd_vec, factor_reciprocal)
         
-        # Calculate sd^2 using SIMD for all 4 pixels
-        let sd_squared = vmulq_f32(transformed_sd, transformed_sd)
+        # Calculate x^2 using SIMD for all 4 pixels
+        let x_squared = vmulq_f32(x_vec, x_vec)
         
         # Extract values for exponential calculation and conditional logic
         var 
-          sd_squared_array: array[4, float32]
-          transformed_sd_array: array[4, float32]
-        vst1q_f32(sd_squared_array[0].addr, sd_squared)
-        vst1q_f32(transformed_sd_array[0].addr, transformed_sd)
+          x_squared_array: array[4, float32]
+        vst1q_f32(x_squared_array[0].addr, x_squared)
         
         var alpha_array: array[4, uint8]
         for i in 0 ..< 4:
           let
-            transformed_sd_val = transformed_sd_array[i]
-            exp_val = exp(-1.0'f32 * sd_squared_array[i] / two_s_squared)
+            sd_val = sd_array[i]
+            exp_val = exp(-1.0'f32 * x_squared_array[i] / two_s_squared)
             f = gaussian_coeff * exp_val
           
-          if transformed_sd_val < 0.0'f32:
-            let alpha_val = min(f * 255.0'f32 * 6.0'f32, 255.0'f32)
+          if sd_val < 0.0'f32:
+            let alpha_val = min(f * 255.0'f32 * 1.1'f32, 255.0'f32)
             alpha_array[i] = uint8(alpha_val)
           else:
             alpha_array[i] = 0'u8
