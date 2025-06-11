@@ -173,7 +173,7 @@ proc drawSdfShape*[I, T](
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
     aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
-    stdDevFactor: float32 = 0.5, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
+    stdDevFactor: float32 = 1/2.2, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
 ) {.hasSimd, raises: [].} =
   drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor, stdDevFactor)
 
@@ -189,6 +189,6 @@ proc drawSdfShapeNonSimd*[I, T](
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
     aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
-    stdDevFactor: float32 = 0.5, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
+    stdDevFactor: float32 = 1/2.2, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
 ) {.raises: [].} =
   drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor, stdDevFactor)
