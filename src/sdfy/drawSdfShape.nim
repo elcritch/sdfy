@@ -38,8 +38,6 @@ proc drawSdfShapeImpl*[I, T](
   if mode in [sdfModeAnnular, sdfModeAnnularAA, sdfModeAnnularRgbSubPixelAA, sdfModeAnnularBgrSubPixelAA]:
     factor = factor * 0.5
 
-  var max_f = 0.0
-
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let p = vec2(x.float32, y.float32) - center + pointOffset
@@ -134,41 +132,38 @@ proc drawSdfShapeImpl*[I, T](
       of sdfModeFeatherGaussian:
         let s = stdDevFactor
         let x = sd / factor
-        let f = gaussian(x, s)
+        let f = 255 * 1.1 * gaussian(x, s)
         c.a = uint8(f * 255)
       of sdfModeDropShadow:
         let s = stdDevFactor
         let sd = sd - spread + 1
         let x = sd / (factor + 0.5)
         let f = 255 * 1.1 * gaussian(x, s)
-        max_f = max(max_f, f)
         c.a = if sd > 0.0: uint8(min(f, 255)) else: c.a
       of sdfModeDropShadowAA:
         let s = stdDevFactor
         let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
         let x = sd / factor
-        let f = gaussian(x, s)
-        c.a = if sd >= 0.0: uint8(min(f * 255 * 6, 255)) else: c.a
+        let f = 255 * 1.1 * gaussian(x, s)
+        c.a = if sd >= 0.0: uint8(min(f, 255)) else: c.a
       of sdfModeInsetShadow:
         let s = stdDevFactor
         let x = sd / factor
-        let f = gaussian(x, s)
+        let f = 255 * 1.1 * gaussian(x, s)
         if sd < 0.0:
-          c.a = uint8(min(f * 255 * 6, 255))
+          c.a = uint8(min(f, 255))
         else:
           discard
       of sdfModeInsetShadowAnnular:
         let s = stdDevFactor
         let x = sd / factor
-        let f = gaussian(x, s)
-        c.a = if sd < 0.0: uint8(min(f * 255 * 6, 255)) else: 0
+        let f = 255 * 1.1 * gaussian(x, s)
+        c.a = if sd < 0.0: uint8(min(f, 255)) else: 0
 
 
       let idx = image.dataIndex(x, y)
       image.data[idx] = c.rgbx()
-
-  echo "max_f: ", max_f
 
 proc drawSdfShape*[I, T](
     image: I,
