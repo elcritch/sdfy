@@ -22,6 +22,8 @@ Please update the README with the new SDF shapes that have been added recently. 
 
 Please update the SIMD `drawSdfShapeNeon` and `drawSdfShapeSse2` versions of `drawSdfShape` to match the new args. Just run `tests1_simd.nim` as it will run the SIMD versions of `test1.nim` automatically.
 
+Please update the SIMD `drawSdfShapeNeon` and `drawSdfShapeSse2` versions of `drawSdfShape` to match the new args. Create a SIMD version of `gaussian` if possible in the respective SIMD modules. Run the test `tests/test1_simd.nim` to test the NEON SIMD version of the main `tests/test1.nim` test. Also run `tests/test1_simd_xc_amd64.nim` to run a cross compiled sse2 version.
+
 ## Prompt
 
 Great, next implement the `sdCircle` function in `shapesSimd.nim` following the patterns established there.
