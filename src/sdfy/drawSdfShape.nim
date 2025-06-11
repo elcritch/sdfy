@@ -9,6 +9,9 @@ import ./simd/shapesSimd
 proc gaussian(x: float32, s: float32): float32 {.inline.} =
   result = 1 / (s * sqrt(2 * PI)) * exp(-1 * x^2 / (2 * s^2))
 
+proc log2Normal(x: float32, s: float32): float32 {.inline.} =
+  result = 1 / (x * s * sqrt(2 * PI)) * exp(-1 * log2(x)^2 / (2 * s^2))
+
 proc drawSdfShapeImpl*[I, T](
     image: I,
     center: Vec2,
@@ -34,6 +37,8 @@ proc drawSdfShapeImpl*[I, T](
   var factor = factor
   if mode in [sdfModeAnnular, sdfModeAnnularAA, sdfModeAnnularRgbSubPixelAA, sdfModeAnnularBgrSubPixelAA]:
     factor = factor * 0.5
+
+  var max_f = 0.0
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
@@ -135,8 +140,9 @@ proc drawSdfShapeImpl*[I, T](
         let s = stdDevFactor
         let sd = sd - spread + 1
         let x = sd / (factor + 0.5)
-        let f = gaussian(x, s)
-        c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: c.a
+        let f = 255 * 1.1 * gaussian(x, s)
+        max_f = max(max_f, f)
+        c.a = if sd > 0.0: uint8(min(f, 255)) else: c.a
       of sdfModeDropShadowAA:
         let s = stdDevFactor
         let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
@@ -161,6 +167,8 @@ proc drawSdfShapeImpl*[I, T](
 
       let idx = image.dataIndex(x, y)
       image.data[idx] = c.rgbx()
+
+  echo "max_f: ", max_f
 
 proc drawSdfShape*[I, T](
     image: I,
