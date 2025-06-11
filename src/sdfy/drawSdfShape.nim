@@ -133,7 +133,8 @@ proc drawSdfShapeImpl*[I, T](
         c.a = uint8(f * 255)
       of sdfModeDropShadow:
         let s = stdDevFactor
-        let x = sd / factor
+        let sd = sd - spread + 1
+        let x = sd / (factor + 0.5)
         let f = gaussian(x, s)
         c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: c.a
       of sdfModeDropShadowAA:

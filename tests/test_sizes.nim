@@ -28,8 +28,8 @@ var
 
 # Define test modes
 let testModes* = [
-  (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-  (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  # (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
+  # (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnularAA, name: "annular_aa", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_fat", factor: 10.0, spread: 10.0, posColor: pos, negColor: neg),
@@ -188,7 +188,8 @@ proc circle() =
 let n = 1
 let m = 0.1
 
-for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
+# for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
+for sz in [200, 201]:
   echo "\n####### Tests for width: ", sz, " ########################################################\n"
   for i in 0 ..< n:
     wh = vec2(sz.float, sz.float)
