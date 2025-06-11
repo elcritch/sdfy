@@ -38,8 +38,6 @@ proc drawSdfShapeNeon*[I, T](
   mixin dataIndex
   
   let
-    pos_rgbx = pos.rgbx()
-    neg_rgbx = neg.rgbx()
     posC = pos.to(Color)
     negC = neg.to(Color)
     center_x = center.x
@@ -119,10 +117,10 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = sd_array[i]
-            final_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            final_color = if sd < 0.0: pos else: neg
             idx = row_start + x + i
           
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeClipAA:
         # Anti-aliased clip mode: mix colors based on clamped (aaFactor * sd + 0.5)
@@ -145,11 +143,11 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             cl = clamped_array[i]
-            # mix(pos, neg, cl) = pos * (1 - cl) + neg * cl
-            mixed_color = mix(pos_rgbx, neg_rgbx, cl)
+            # mix(pos, neg, cl) using Color to get scalar mixing
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
             idx = row_start + x + i
           
-          image.data[idx] = mixed_color
+          image.data[idx] = mixed_color.rgbx()
 
       of sdfModeAnnular:
         # Annular mode: create ring shape
@@ -168,10 +166,10 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = annular_sd_array[i]
-            final_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            final_color = if sd < 0.0: pos else: neg
             idx = row_start + x + i
           
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeAnnularAA:
         # Anti-aliased annular mode: create ring shape with anti-aliasing
@@ -201,11 +199,11 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             cl = clamped_array[i]
-            # mix(pos, neg, cl) = pos * (1 - cl) + neg * cl
-            mixed_color = mix(pos_rgbx, neg_rgbx, cl)
+            # mix(pos, neg, cl) using Color to get scalar mixing
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
             idx = row_start + x + i
           
-          image.data[idx] = mixed_color
+          image.data[idx] = mixed_color.rgbx()
 
       of sdfModeFeather:
         # Feathered mode: calculate alpha values using SIMD
@@ -225,13 +223,13 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = sd_array[i]
-            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            base_color = if sd < 0.0: pos else: neg
             alpha = alpha_array[i].uint8
             idx = row_start + x + i
           
           var final_color = base_color
           final_color.a = alpha
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeFeatherInv:
         # Inverted feathered mode: calculate alpha values using SIMD then invert
@@ -253,13 +251,13 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = sd_array[i]
-            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            base_color = if sd < 0.0: pos else: neg
             alpha = alpha_array[i].uint8
             idx = row_start + x + i
           
           var final_color = base_color
           final_color.a = alpha
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeFeatherGaussian:
         # Gaussian feathered mode: calculate Gaussian alpha values
@@ -289,13 +287,13 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = sd_array[i]
-            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            base_color = if sd < 0.0: pos else: neg
             alpha = alpha_array[i]
             idx = row_start + x + i
           
           var final_color = base_color
           final_color.a = alpha
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeDropShadow:
         # Drop shadow mode: transform sd and apply Gaussian with conditional alpha
@@ -350,13 +348,13 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = sd_array[i]
-            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            base_color = if sd < 0.0: pos else: neg
             alpha = alpha_array[i]
             idx = row_start + x + i
           
           var final_color = base_color
           final_color.a = alpha
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeDropShadowAA:
         # Drop shadow mode with anti-aliasing: apply color mixing first, then transform sd and apply Gaussian with conditional alpha
@@ -424,15 +422,15 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             cl = clamped_array[i]
-            # mix(pos, neg, cl) = pos * (1 - cl) + neg * cl
-            mixed_color = mix(pos_rgbx, neg_rgbx, cl)
+            # mix(pos, neg, cl) using Color to get scalar mixing
+            mixed_color = mix(posC, negC, cl).to(ColorRGBA)
             transformed_sd_val = transformed_sd_array[i]
             idx = row_start + x + i
           
           var final_color = mixed_color
           if transformed_sd_val >= 0.0'f32:
             final_color.a = alpha_array[i]
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeInsetShadow:
         # Inset shadow mode: transform sd and apply Gaussian with conditional alpha
@@ -476,14 +474,14 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = sd_array[i]
-            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            base_color = if sd < 0.0: pos else: neg
             alpha = alpha_array[i]
             idx = row_start + x + i
           
           var final_color = base_color
           if sd < 0.0:
             final_color.a = alpha
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeInsetShadowAnnular:
         # Inset shadow annular mode: transform sd and apply Gaussian with conditional alpha
@@ -526,13 +524,13 @@ proc drawSdfShapeNeon*[I, T](
         for i in 0 ..< remainingPixels:
           let
             sd = sd_array[i]
-            base_color = if sd < 0.0: pos_rgbx else: neg_rgbx
+            base_color = if sd < 0.0: pos else: neg
             alpha = alpha_array[i]
             idx = row_start + x + i
           
           var final_color = base_color
           final_color.a = alpha
-          image.data[idx] = final_color
+          image.data[idx] = final_color.rgbx()
 
       of sdfModeClipRgbSubPixelAA:
         # RGB sub-pixel anti-aliasing mode: R=0.25, G=0.5, B=0.75, A=0.5
