@@ -6,6 +6,9 @@ import ./shapes
 
 import ./simd/shapesSimd
 
+proc gaussian(x: float32, s: float32): float32 {.inline.} =
+  result = 1 / (s * sqrt(2 * PI)) * exp(-1 * x^2 / (2 * s^2))
+
 proc drawSdfShapeImpl*[I, T](
     image: I,
     center: Vec2,
@@ -18,6 +21,7 @@ proc drawSdfShapeImpl*[I, T](
     spread: float32,
     pointOffset: Vec2, ## offset the point by this amount, corrects pixelation at edges
     aaFactor: float32, ## controls how harsh the AA is applied, higher values result in a sharper transition
+    stdDevFactor: float32, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
 ) {.raises: [].} =
   ## Generic signed distance function for shapes
   ## Supports rounded boxes, chamfered boxes, circles, Bézier curves, boxes, ellipses, arcs, parallelograms, pies, and rings based on params type
@@ -123,34 +127,34 @@ proc drawSdfShapeImpl*[I, T](
       of sdfModeFeatherInv:
         c.a = 255 - uint8(max(0.0, min(255, (factor*sd) + 127)))
       of sdfModeFeatherGaussian:
-        let sd = sd
-        let s = 2.2
-        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        let s = stdDevFactor
+        let x = sd / factor
+        let f = gaussian(x, s)
         c.a = uint8(f * 255)
       of sdfModeDropShadow:
-        let s = 2.2
-        let sd = sd / factor * s - spread / 8.8
-        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        let s = stdDevFactor
+        let x = sd / factor
+        let f = gaussian(x, s)
         c.a = if sd > 0.0: uint8(min(f * 255 * 6, 255)) else: c.a
       of sdfModeDropShadowAA:
-        let s = 2.2
+        let s = stdDevFactor
         let cl = clamp(aaFactor * sd + 0.5, 0.0, 1.0)
         c = mix(pos, neg, cl)
-        let sd = sd / factor * s - spread / 8.8
-        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        let x = sd / factor
+        let f = gaussian(x, s)
         c.a = if sd >= 0.0: uint8(min(f * 255 * 6, 255)) else: c.a
       of sdfModeInsetShadow:
-        let s = 2.2
-        let sd = sd / factor * s - spread / 8.8
-        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        let s = stdDevFactor
+        let x = sd / factor
+        let f = gaussian(x, s)
         if sd < 0.0:
           c.a = uint8(min(f * 255 * 6, 255))
         else:
           discard
       of sdfModeInsetShadowAnnular:
-        let s = 2.2
-        let sd = sd / factor * s - spread / 8.8
-        let f = 1 / sqrt(2 * PI * s^2) * exp(-1 * sd^2 / (2 * s^2))
+        let s = stdDevFactor
+        let x = sd / factor
+        let f = gaussian(x, s)
         c.a = if sd < 0.0: uint8(min(f * 255 * 6, 255)) else: 0
 
 
@@ -169,8 +173,9 @@ proc drawSdfShape*[I, T](
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
     aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
+    stdDevFactor: float32 = 0.5, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
 ) {.hasSimd, raises: [].} =
-  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor)
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor, stdDevFactor)
 
 proc drawSdfShapeNonSimd*[I, T](
     image: I,
@@ -184,5 +189,6 @@ proc drawSdfShapeNonSimd*[I, T](
     spread: float32 = 0.0,
     pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
     aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
+    stdDevFactor: float32 = 0.5, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
 ) {.raises: [].} =
-  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor)
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor, stdDevFactor)

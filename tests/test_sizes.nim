@@ -30,8 +30,8 @@ var
 let testModes* = [
   (mode: sdfModeClip, name: "clip", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   (mode: sdfModeClipAA, name: "clip_aa", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-  (mode: sdfModeAnnular, name: "annular", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
-  (mode: sdfModeAnnularAA, name: "annular_aa", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
+  # (mode: sdfModeAnnular, name: "annular", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
+  # (mode: sdfModeAnnularAA, name: "annular_aa", factor: 5.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_fat", factor: 10.0, spread: 10.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_fatter", factor: 20.0, spread: 10.0, posColor: pos, negColor: neg),
   # (mode: sdfModeAnnular, name: "annular_small", factor: 1.0, spread: 10.0, posColor: pos, negColor: neg),
@@ -40,7 +40,8 @@ let testModes* = [
   # (mode: sdfModeFeather, name: "feather", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeFeatherInv, name: "feather_inv", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeFeatherGaussian, name: "feather_gaussian", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
-  # (mode: sdfModeDropShadow, name: "drop_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+  (mode: sdfModeDropShadow, name: "drop_shadow", factor: 4.0, spread: 0.0, posColor: pos, negColor: pos),
+  (mode: sdfModeDropShadow, name: "drop_shadow_contract", factor: 4.0, spread: 0.0, posColor: pos, negColor: neg),
   # (mode: sdfModeInsetShadow, name: "inset_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
   # (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
 ]
@@ -193,11 +194,11 @@ for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
     sdOffset = 0.2
     roundedBox()
 
-for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
-  echo "\n####### Tests for width: ", sz, " ########################################################\n"
-  for i in 0 ..< n:
-    wh = vec2(sz.float, sz.float)
-    # sdOffset = float(i - n div 2) * m
-    sdOffset = 0.2
-    # chamferBox()
-    circle()
+# for sz in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 198, 199, 200, 201, 202]:
+#   echo "\n####### Tests for width: ", sz, " ########################################################\n"
+#   for i in 0 ..< n:
+#     wh = vec2(sz.float, sz.float)
+#     # sdOffset = float(i - n div 2) * m
+#     sdOffset = 0.2
+#     # chamferBox()
+#     circle()
