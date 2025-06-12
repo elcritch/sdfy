@@ -1,2 +1,2 @@
-# --define:sdfyNoSimd
-# --define:pixieNoSimd
+--define:sdfyNoSimd
+--define:pixieNoSimd
