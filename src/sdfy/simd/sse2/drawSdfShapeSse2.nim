@@ -419,19 +419,26 @@ proc drawSdfShapeSse2*[I, T](
 
       of sdfModeInsetShadow:
         # Inset shadow mode: transform sd and apply Gaussian with conditional alpha
-        # x = sd / factor
+        # sd = sd + spread + 1
+        # x = sd / (factor + 0.5)
         # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
-        # alpha = if sd < 0.0: min(f * 255 * 1.1, 255) else: discard
+        # alpha = if sd < 0.0: min(f * 255 * 1.1, 255) else: c.a
         let
           s = stdDevFactor
           s_squared = s * s
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
         
-        # Calculate x = sd / factor using SIMD
+        # Transform sd values using SIMD: sd = sd + spread + 1
         let
-          factor_reciprocal = mm_set1_ps(1.0'f32 / factor)
-          x_vec = mm_mul_ps(sd_vec, factor_reciprocal)
+          spread_vec = mm_set1_ps(spread)
+          one_vec_local = mm_set1_ps(1.0)
+          transformed_sd = mm_add_ps(mm_add_ps(sd_vec, spread_vec), one_vec_local)
+        
+        # Calculate x = sd / (factor + 0.5) using SIMD
+        let
+          factor_reciprocal = mm_set1_ps(1.0'f32 / (factor + 0.5))
+          x_vec = mm_mul_ps(transformed_sd, factor_reciprocal)
         
         # Calculate x^2 using SIMD for all 4 pixels
         let x_squared = mm_mul_ps(x_vec, x_vec)
@@ -439,21 +446,23 @@ proc drawSdfShapeSse2*[I, T](
         # Extract values for exponential calculation and conditional logic
         var 
           x_squared_array: array[4, float32]
+          transformed_sd_array: array[4, float32]
         mm_storeu_ps(x_squared_array[0].addr, x_squared)
+        mm_storeu_ps(transformed_sd_array[0].addr, transformed_sd)
         
         var alpha_array: array[4, uint8]
         for i in 0 ..< 4:
           let
-            sd_val = sd_array[i]
+            transformed_sd_val = transformed_sd_array[i]
             exp_val = exp(-1.0'f32 * x_squared_array[i] / two_s_squared)
             f = gaussian_coeff * exp_val
           
-          if sd_val < 0.0'f32:
+          if transformed_sd_val < 0.0'f32:
             let alpha_val = min(f * 255.0'f32 * 1.1'f32, 255.0'f32)
             alpha_array[i] = uint8(alpha_val)
           else:
-            # Don't modify alpha for positive sd values
-            alpha_array[i] = if sd_val < 0.0: pos.a else: neg.a
+            # Use original alpha for positive sd values
+            alpha_array[i] = if sd_array[i] < 0.0: pos.a else: neg.a
         
         # Process only the actual pixels (not the padded ones)
         for i in 0 ..< remainingPixels:
@@ -464,13 +473,14 @@ proc drawSdfShapeSse2*[I, T](
             idx = row_start + x + i
           
           var final_color = base_color
-          if sd < 0.0:
+          if transformed_sd_array[i] < 0.0:
             final_color.a = alpha
           image.data[idx] = final_color.rgbx()
 
       of sdfModeInsetShadowAnnular:
         # Inset shadow annular mode: transform sd and apply Gaussian with conditional alpha
-        # x = sd / factor
+        # sd = sd + spread + 1
+        # x = sd / (factor + 0.5)
         # f = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
         # alpha = if sd < 0.0: min(f * 255 * 1.1, 255) else: 0
         let
@@ -479,10 +489,16 @@ proc drawSdfShapeSse2*[I, T](
           two_s_squared = 2.0'f32 * s_squared
           gaussian_coeff = 1.0'f32 / sqrt(2.0'f32 * PI * s_squared)
         
-        # Calculate x = sd / factor using SIMD
+        # Transform sd values using SIMD: sd = sd + spread + 1
         let
-          factor_reciprocal = mm_set1_ps(1.0'f32 / factor)
-          x_vec = mm_mul_ps(sd_vec, factor_reciprocal)
+          spread_vec = mm_set1_ps(spread)
+          one_vec_local = mm_set1_ps(1.0)
+          transformed_sd = mm_add_ps(mm_add_ps(sd_vec, spread_vec), one_vec_local)
+        
+        # Calculate x = sd / (factor + 0.5) using SIMD
+        let
+          factor_reciprocal = mm_set1_ps(1.0'f32 / (factor + 0.5))
+          x_vec = mm_mul_ps(transformed_sd, factor_reciprocal)
         
         # Calculate x^2 using SIMD for all 4 pixels
         let x_squared = mm_mul_ps(x_vec, x_vec)
@@ -490,16 +506,18 @@ proc drawSdfShapeSse2*[I, T](
         # Extract values for exponential calculation and conditional logic
         var 
           x_squared_array: array[4, float32]
+          transformed_sd_array: array[4, float32]
         mm_storeu_ps(x_squared_array[0].addr, x_squared)
+        mm_storeu_ps(transformed_sd_array[0].addr, transformed_sd)
         
         var alpha_array: array[4, uint8]
         for i in 0 ..< 4:
           let
-            sd_val = sd_array[i]
+            transformed_sd_val = transformed_sd_array[i]
             exp_val = exp(-1.0'f32 * x_squared_array[i] / two_s_squared)
             f = gaussian_coeff * exp_val
           
-          if sd_val < 0.0'f32:
+          if transformed_sd_val < 0.0'f32:
             let alpha_val = min(f * 255.0'f32 * 1.1'f32, 255.0'f32)
             alpha_array[i] = uint8(alpha_val)
           else:
