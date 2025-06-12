@@ -149,15 +149,14 @@ proc drawSdfShapeImpl*[I, T](
         c.a = if sd >= 0.0: uint8(min(f, 255)) else: c.a
       of sdfModeInsetShadow:
         let s = stdDevFactor
-        let x = sd / factor
+        let sd = sd + spread + 1
+        let x = sd / (factor + 0.5)
         let f = 255 * 1.1 * gaussian(x, s)
-        if sd < 0.0:
-          c.a = uint8(min(f, 255))
-        else:
-          discard
+        c.a = if sd < 0.0: uint8(min(f, 255)) else: c.a
       of sdfModeInsetShadowAnnular:
         let s = stdDevFactor
-        let x = sd / factor
+        let sd = sd + spread + 1
+        let x = sd / (factor + 0.5)
         let f = 255 * 1.1 * gaussian(x, s)
         c.a = if sd < 0.0: uint8(min(f, 255)) else: 0
 

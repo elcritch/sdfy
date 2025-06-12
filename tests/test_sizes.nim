@@ -46,8 +46,10 @@ let testModes* = [
   (mode: sdfModeDropShadow, name: "drop_shadow_spread_contrast", factor: 10.0, spread: 20.0, posColor: pos, negColor: neg),
   (mode: sdfModeInsetShadow, name: "inset_shadow", factor: 10.0, spread: 0.0, posColor: pos, negColor: pos),
   (mode: sdfModeInsetShadow, name: "inset_shadow_contrast", factor: 10.0, spread: 0.0, posColor: pos, negColor: neg),
+  (mode: sdfModeInsetShadow, name: "inset_shadow_spread", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+  (mode: sdfModeInsetShadow, name: "inset_shadow_spread_contrast", factor: 10.0, spread: 20.0, posColor: pos, negColor: neg),
   # (mode: sdfModeInsetShadow, name: "inset_shadow", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
-  # (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
+  (mode: sdfModeInsetShadowAnnular, name: "inset_shadow_annular", factor: 10.0, spread: 20.0, posColor: pos, negColor: pos),
 ]
 
 proc measureWidthRow*(image: Image, row: int, color: ColorRGBA): tuple[first: int, last: int, width: int, counts: int] =
