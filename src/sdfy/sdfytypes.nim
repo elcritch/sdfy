@@ -1,4 +1,5 @@
 import chroma
+import pixie
 import vmath
 
 type
@@ -73,6 +74,13 @@ type
     n*: Vec2  ## sin/cos of the ring's aperture (n.x = sin, n.y = cos)
     r*: float32  ## radius
     th*: float32  ## thickness
+
+  MsdfBitmapParams* = object
+    ## Parameters for rendering MSDF bitmaps
+    image*: Image
+    pxRange*: float32
+    sdThreshold*: float32
+    flipY*: bool
 
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.

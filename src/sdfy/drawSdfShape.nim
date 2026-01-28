@@ -66,6 +66,8 @@ proc drawSdfShapeImpl*[I, T](
           sdPie(p, params.c, params.r)
         elif T is RingParams:
           sdRing(p, params.n, params.r, params.th)
+        elif T is MsdfBitmapParams:
+          sdMsdfBitmap(p, wh, params)
         else:
           {.error: "Unsupported shape parameter type".}
 
@@ -178,6 +180,22 @@ proc drawSdfShape*[I, T](
     aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
     stdDevFactor: float32 = 1/2.2, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
 ) {.hasSimd, raises: [].} =
+  drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor, stdDevFactor)
+
+proc drawSdfShape*[I](
+    image: I,
+    center: Vec2,
+    wh: Vec2,
+    params: MsdfBitmapParams,
+    pos: ColorRGBA,
+    neg: ColorRGBA,
+    mode: SDFMode,
+    factor: float32 = 4,
+    spread: float32 = 0.0,
+    pointOffset: Vec2 = vec2(0.2, 0.2), ## offset the point by this amount, corrects pixelation at edges
+    aaFactor: float32 = 1.2, ## factor to multiply sd by for AA
+    stdDevFactor: float32 = 1/2.2, ## controls the standard deviation of the Gaussian blur, higher values result in a softer transition
+) {.raises: [].} =
   drawSdfShapeImpl(image, center, wh, params, pos, neg, mode, factor, spread, pointOffset, aaFactor, stdDevFactor)
 
 proc drawSdfShapeNonSimd*[I, T](

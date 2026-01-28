@@ -14,3 +14,10 @@ requires "vmath"
 
 feature "test":
   requires "pixie >= 0.5.0"
+
+feature "msdf":
+  requires "pixie >= 0.5.0"
+feature "msdf-reference":
+  requires "https://github.com/Chlumsky/msdfgen"
+  requires "https://github.com/ShoYamanishi/SDFont"
+
