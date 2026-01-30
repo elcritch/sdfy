@@ -81,6 +81,7 @@ type
     pxRange*: float32
     sdThreshold*: float32
     flipY*: bool
+    useAlpha*: bool ## when true, use alpha channel as the SDF (MTSDF true distance)
 
 proc newSdfImage*(width, height: int): SdfImage {.raises: [ValueError].} =
   ## Creates a new image with the parameter dimensions.
