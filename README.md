@@ -434,8 +434,10 @@ SDFY includes an MSDF generator for fonts and SVG paths plus helpers to render M
 Use `generateMsdfGlyph` / `generateMsdfPath` from `sdfy/msdfgen`, then render with
 `renderMsdf`, `blitMsdfGlyph`, or `drawSdfShape` via `MsdfBitmapParams`.
 
+This works, but as you can see isn't super high quality for small fonts.
+
 ### Sample Font Output
-![MSDF Sample Font Output](tests/expected/msdf_alnum_draw_32.png)
+![MSDF Sample Font Output](tests/expected/msdf_alnum_draw_32_white.png)
 
 ### Star Icon (SVG Path)
 ![MSDF Star Icon](tests/expected/msdf_star_icon_large.png)
