@@ -40,7 +40,7 @@ jobs:
 
     - name: Install Deps
       run: |
-        atlas install --feature:test --feature:msdf
+        atlas install --feature:test
 
     - name: Build Tests
       run: |
