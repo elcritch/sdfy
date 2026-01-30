@@ -430,16 +430,23 @@ drawSdfShape(
 
 ## MSDF (Multi-channel Signed Distance Fields)
 
-SDFY includes an MSDF generator for fonts and SVG paths plus helpers to render MSDF bitmaps.
+SDFY includes an MSDF generator for fonts and SVG paths plus helpers to render MSDF bitmaps based on [MSDFGen](https://github.com/Chlumsky/msdfgen). This is based on Valve's original SDF bitmap field fonts for OpenGL.
+
 Use `generateMsdfGlyph` / `generateMsdfPath` from `sdfy/msdfgen`, then render with
 `renderMsdf`, `blitMsdfGlyph`, or `drawSdfShape` via `MsdfBitmapParams`.
 
-This works, but as you can see isn't super high quality for small fonts.
-
 ### Sample Font Output
+
+This works, but as you can see isn't super high quality for small fonts. You would probably need to user super-sampling to get this to work well:
+
 ![MSDF Sample Font Output](tests/expected/msdf_alnum_draw_32_white.png)
 
 ### Star Icon (SVG Path)
+
+For generic SVG paths, MSDF works rather well and scales very nicely. This star is generated at 32x32 and scales up to 512x512 nicely.
+
+Note the shadow artifacts - the normal SDFModes for drop shadow and gaussian feathers don't work well with MSDF fields. It might be a matter of tweaking.
+
 ![MSDF Star Icon](tests/expected/msdf_star_icon_large.png)
 
 ## Inspiration
