@@ -50,18 +50,6 @@ From this we get a good looking, if not perfect, drop shadow! There's a slight d
 - **Inset Shadow**: Inner shadow effects
 - **Inset Shadow Annular**: Annular inner shadow effects
 
-## MSDF (Multi-channel Signed Distance Fields)
-
-SDFY includes an MSDF generator for fonts and SVG paths plus helpers to render MSDF bitmaps.
-Use `generateMsdfGlyph` / `generateMsdfPath` from `sdfy/msdfgen`, then render with
-`renderMsdf`, `blitMsdfGlyph`, or `drawSdfShape` via `MsdfBitmapParams`.
-
-### Sample Font Output
-![MSDF Sample Font Output](tests/outputs/msdf_alnum_32.png)
-
-### Star Icon (SVG Path)
-![MSDF Star Icon](tests/outputs/msdf_star_icon.png)
-
 ## Performance
 
 | Mode | With SIMD | Without SIMD | Speedup |
@@ -379,12 +367,9 @@ drawSdfShape(
 )
 ```
 
-### SdfImage vs Pixie Image
+### SdfImage vs Pixie type for Image
 
-- **SdfImage**: Lightweight, minimal dependencies, included with SDFY
-- **Pixie Image**: Full-featured graphics library with extensive drawing capabilities, file I/O, and more
-
-Both types implement the same interface and can be used interchangeably with SDFY functions.
+SDFY includes an image type equivalent to Pixie's `Image` type for compatability with Pixie.
 
 ## Examples
 
@@ -443,150 +428,17 @@ drawSdfShape(
 )
 ```
 
-### Chamfer Box
+## MSDF (Multi-channel Signed Distance Fields)
 
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),
-  params = ChamferBoxParams(chamfer: 20.0),
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
+SDFY includes an MSDF generator for fonts and SVG paths plus helpers to render MSDF bitmaps.
+Use `generateMsdfGlyph` / `generateMsdfPath` from `sdfy/msdfgen`, then render with
+`renderMsdf`, `blitMsdfGlyph`, or `drawSdfShape` via `MsdfBitmapParams`.
 
-### Circle
+### Sample Font Output
+![MSDF Sample Font Output](tests/expected/msdf_alnum_32.png)
 
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for circles
-  params = CircleParams(r: 100.0),
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
-
-### Box (Rectangle)
-
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for boxes since we specify half-extents directly
-  params = BoxParams(b: vec2(80.0, 60.0)),  # 160x120 pixel box
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
-
-### Ellipse
-
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for ellipses since we specify semi-axes directly
-  params = EllipseParams(ab: vec2(90.0, 60.0)),  # 180x120 pixel ellipse
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
-
-### Quadratic Bézier Curve
-
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for Bézier curves
-  params = BezierParams(
-    A: vec2(50.0, 100.0),   # Start point (relative to center)
-    B: vec2(0.0, -50.0),    # Control point
-    C: vec2(-50.0, 100.0)   # End point
-  ),
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
-
-### Arc
-
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for arcs
-  params = ArcParams(
-    sc: vec2(sin(PI/4), cos(PI/4)),  # 45 degree aperture
-    ra: 80.0,   # inner radius
-    rb: 20.0    # thickness
-  ),
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
-
-### Parallelogram
-
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for parallelograms
-  params = ParallelogramParams(
-    wi: 80.0,   # width
-    he: 60.0,   # height
-    sk: 20.0    # skew
-  ),
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
-
-### Pie Slice
-
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for pies
-  params = PieParams(
-    c: vec2(sin(PI/3), cos(PI/3)),  # 60 degree aperture
-    r: 80.0   # radius
-  ),
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
-
-### Ring
-
-```nim
-drawSdfShape(
-  image,
-  center = vec2(150, 150),
-  wh = vec2(200, 200),  # ignored for rings
-  params = RingParams(
-    n: vec2(sin(PI/4), cos(PI/4)),  # 45 degree aperture
-    r: 80.0,   # radius
-    th: 20.0   # thickness
-  ),
-  pos = rgba(255, 100, 100, 255),
-  neg = rgba(50, 50, 50, 255),
-  mode = sdfModeFeatherInv
-)
-```
+### Star Icon (SVG Path)
+![MSDF Star Icon](tests/expected/msdf_star_icon_large.png)
 
 ## Inspiration
 
