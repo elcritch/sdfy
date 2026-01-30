@@ -73,6 +73,12 @@ type
     g: float64
     b: float64
 
+  MultiAndTrueDistance = object
+    r: float64
+    g: float64
+    b: float64
+    a: float64
+
   PerpSelectorBase = object
     minTrueDistance: SignedDistance
     minNegativePerp: float64
@@ -1147,6 +1153,12 @@ proc resolveDistance(distance: MultiDistance): float64 {.inline.} =
 proc invertDistance(distance: MultiDistance): MultiDistance {.inline.} =
   MultiDistance(r: -distance.r, g: -distance.g, b: -distance.b)
 
+proc resolveDistance(distance: MultiAndTrueDistance): float64 {.inline.} =
+  median(distance.r, distance.g, distance.b)
+
+proc invertDistance(distance: MultiAndTrueDistance): MultiAndTrueDistance {.inline.} =
+  MultiAndTrueDistance(r: -distance.r, g: -distance.g, b: -distance.b, a: -distance.a)
+
 
 proc distanceForShape(shape: Shape; p: DVec2; overlapSupport: bool): MultiDistance =
   if shape.contours.len == 0:
@@ -1239,6 +1251,112 @@ proc distanceForShape(shape: Shape; p: DVec2; overlapSupport: bool): MultiDistan
 
   resultDistance
 
+proc trueDistanceForShape(shape: Shape; p: DVec2; overlapSupport: bool): float64 =
+  if shape.contours.len == 0:
+    return 0
+
+  if not overlapSupport:
+    var selector = MultiDistanceSelector()
+    reset(selector, p)
+    for contour in shape.contours:
+      if contour.edges.len == 0:
+        continue
+      var prevEdge = if contour.edges.len >= 2: contour.edges[^2] else: contour.edges[0]
+      var curEdge = contour.edges[^1]
+      for edge in contour.edges:
+        addEdge(selector, prevEdge, curEdge, edge)
+        prevEdge = curEdge
+        curEdge = edge
+    return trueDistance(selector).distance
+
+  var windings = newSeq[int](shape.contours.len)
+  for i, contour in shape.contours:
+    windings[i] = contourWinding(contour)
+
+  var edgeSelectors = newSeq[MultiDistanceSelector](shape.contours.len)
+  for i, contour in shape.contours:
+    reset(edgeSelectors[i], p)
+    if contour.edges.len == 0:
+      continue
+    var prevEdge = if contour.edges.len >= 2: contour.edges[^2] else: contour.edges[0]
+    var curEdge = contour.edges[^1]
+    for edge in contour.edges:
+      addEdge(edgeSelectors[i], prevEdge, curEdge, edge)
+      prevEdge = curEdge
+      curEdge = edge
+
+  var shapeSelector = MultiDistanceSelector()
+  var innerSelector = MultiDistanceSelector()
+  var outerSelector = MultiDistanceSelector()
+  reset(shapeSelector, p)
+  reset(innerSelector, p)
+  reset(outerSelector, p)
+
+  for i in 0 ..< edgeSelectors.len:
+    let edgeDistance = distance(edgeSelectors[i])
+    merge(shapeSelector, edgeSelectors[i])
+    if windings[i] > 0 and resolveDistance(edgeDistance) >= 0:
+      merge(innerSelector, edgeSelectors[i])
+    if windings[i] < 0 and resolveDistance(edgeDistance) <= 0:
+      merge(outerSelector, edgeSelectors[i])
+
+  let shapeDistance = distance(shapeSelector)
+  var innerDistance = distance(innerSelector)
+  var outerDistance = distance(outerSelector)
+  let innerScalar = resolveDistance(innerDistance)
+  let outerScalar = resolveDistance(outerDistance)
+
+  var resultDistance = MultiDistance(r: -1.0e300, g: -1.0e300, b: -1.0e300)
+  var resultTrue = -1.0e300
+  var winding = 0
+
+  if innerScalar >= 0 and abs(innerScalar) <= abs(outerScalar):
+    resultDistance = innerDistance
+    resultTrue = trueDistance(innerSelector).distance
+    winding = 1
+    for i in 0 ..< edgeSelectors.len:
+      if windings[i] > 0:
+        let contourDistance = distance(edgeSelectors[i])
+        if abs(resolveDistance(contourDistance)) < abs(outerScalar) and
+            resolveDistance(contourDistance) > resolveDistance(resultDistance):
+          resultDistance = contourDistance
+          resultTrue = trueDistance(edgeSelectors[i]).distance
+  elif outerScalar <= 0 and abs(outerScalar) < abs(innerScalar):
+    resultDistance = outerDistance
+    resultTrue = trueDistance(outerSelector).distance
+    winding = -1
+    for i in 0 ..< edgeSelectors.len:
+      if windings[i] < 0:
+        let contourDistance = distance(edgeSelectors[i])
+        if abs(resolveDistance(contourDistance)) < abs(innerScalar) and
+            resolveDistance(contourDistance) < resolveDistance(resultDistance):
+          resultDistance = contourDistance
+          resultTrue = trueDistance(edgeSelectors[i]).distance
+  else:
+    return trueDistance(shapeSelector).distance
+
+  for i in 0 ..< edgeSelectors.len:
+    if windings[i] != winding:
+      let contourDistance = distance(edgeSelectors[i])
+      if resolveDistance(contourDistance) * resolveDistance(resultDistance) >= 0 and
+          abs(resolveDistance(contourDistance)) < abs(resolveDistance(resultDistance)):
+        resultDistance = contourDistance
+        resultTrue = trueDistance(edgeSelectors[i]).distance
+
+  if resolveDistance(resultDistance) == resolveDistance(shapeDistance):
+    resultDistance = shapeDistance
+    resultTrue = trueDistance(shapeSelector).distance
+
+  resultTrue
+
+proc distanceForShapeMtsdf(shape: Shape; p: DVec2; overlapSupport: bool): MultiAndTrueDistance =
+  let dist = distanceForShape(shape, p, overlapSupport)
+  MultiAndTrueDistance(
+    r: dist.r,
+    g: dist.g,
+    b: dist.b,
+    a: trueDistanceForShape(shape, p, overlapSupport)
+  )
 
 proc isSpaceChar(c: char): bool {.inline.} =
   c == ' ' or c == '\t' or c == '\n' or c == '\r'
@@ -1451,6 +1569,12 @@ proc initDistanceMappingInverse(range: Range): DistanceMapping =
     translate: range.lower / denom
   )
 
+proc unpremultiply(value, alpha: float64): float64 {.inline.} =
+  if alpha <= 0.0:
+    0.0
+  else:
+    clamp01(value / alpha)
+
 proc interpolateMsdf(sdf: Image; pos: DVec2): array[3, float64] =
   var px = clamp(pos.x, 0.0, sdf.width.float64)
   var py = clamp(pos.y, 0.0, sdf.height.float64)
@@ -1467,36 +1591,80 @@ proc interpolateMsdf(sdf: Image; pos: DVec2): array[3, float64] =
   let t = clampInt(b + 1, 0, sdf.height - 1)
   let width = sdf.width
 
+  let inv = 1.0 / 255.0
   let lb = sdf.data[b * width + l]
   let rb = sdf.data[b * width + r]
   let lt = sdf.data[t * width + l]
   let rt = sdf.data[t * width + r]
-
-  let inv = 1.0 / 255.0
+  let lba = lb.a.float64 * inv
+  let rba = rb.a.float64 * inv
+  let lta = lt.a.float64 * inv
+  let rta = rt.a.float64 * inv
+  let lbr = unpremultiply(lb.r.float64 * inv, lba)
+  let lbg = unpremultiply(lb.g.float64 * inv, lba)
+  let lbb = unpremultiply(lb.b.float64 * inv, lba)
+  let rbr = unpremultiply(rb.r.float64 * inv, rba)
+  let rbg = unpremultiply(rb.g.float64 * inv, rba)
+  let rbb = unpremultiply(rb.b.float64 * inv, rba)
+  let ltr = unpremultiply(lt.r.float64 * inv, lta)
+  let ltg = unpremultiply(lt.g.float64 * inv, lta)
+  let ltb = unpremultiply(lt.b.float64 * inv, lta)
+  let rtr = unpremultiply(rt.r.float64 * inv, rta)
+  let rtg = unpremultiply(rt.g.float64 * inv, rta)
+  let rtb = unpremultiply(rt.b.float64 * inv, rta)
   result[0] = lerp(
-    lerp(lb.r.float64, rb.r.float64, lr),
-    lerp(lt.r.float64, rt.r.float64, lr),
+    lerp(lbr, rbr, lr),
+    lerp(ltr, rtr, lr),
     bt
-  ) * inv
+  )
   result[1] = lerp(
-    lerp(lb.g.float64, rb.g.float64, lr),
-    lerp(lt.g.float64, rt.g.float64, lr),
+    lerp(lbg, rbg, lr),
+    lerp(ltg, rtg, lr),
     bt
-  ) * inv
+  )
   result[2] = lerp(
-    lerp(lb.b.float64, rb.b.float64, lr),
-    lerp(lt.b.float64, rt.b.float64, lr),
+    lerp(lbb, rbb, lr),
+    lerp(ltb, rtb, lr),
     bt
-  ) * inv
+  )
 
 proc sampleMsdfMedian(sdf: Image; x, y: float32): float64 {.inline.} =
-  let sample = sdf.getRgbaSmooth(x, y)
+  let x0 = x.floor.int
+  let y0 = y.floor.int
+  let x1 = x0 + 1
+  let y1 = y0 + 1
+  let xf = x - x.floor
+  let yf = y - y.floor
+
   let inv = 1.0 / 255.0
-  median(
-    sample.r.float64 * inv,
-    sample.g.float64 * inv,
-    sample.b.float64 * inv
-  )
+  let c00 = sdf[x0, y0]
+  let c10 = sdf[x1, y0]
+  let c01 = sdf[x0, y1]
+  let c11 = sdf[x1, y1]
+
+  let a00 = c00.a.float64 * inv
+  let a10 = c10.a.float64 * inv
+  let a01 = c01.a.float64 * inv
+  let a11 = c11.a.float64 * inv
+
+  let r00 = unpremultiply(c00.r.float64 * inv, a00)
+  let g00 = unpremultiply(c00.g.float64 * inv, a00)
+  let b00 = unpremultiply(c00.b.float64 * inv, a00)
+  let r10 = unpremultiply(c10.r.float64 * inv, a10)
+  let g10 = unpremultiply(c10.g.float64 * inv, a10)
+  let b10 = unpremultiply(c10.b.float64 * inv, a10)
+  let r01 = unpremultiply(c01.r.float64 * inv, a01)
+  let g01 = unpremultiply(c01.g.float64 * inv, a01)
+  let b01 = unpremultiply(c01.b.float64 * inv, a01)
+  let r11 = unpremultiply(c11.r.float64 * inv, a11)
+  let g11 = unpremultiply(c11.g.float64 * inv, a11)
+  let b11 = unpremultiply(c11.b.float64 * inv, a11)
+
+  let r = lerp(lerp(r00, r10, xf), lerp(r01, r11, xf), yf)
+  let g = lerp(lerp(g00, g10, xf), lerp(g01, g11, xf), yf)
+  let b = lerp(lerp(b00, b10, xf), lerp(b01, b11, xf), yf)
+
+  median(r, g, b)
 
 proc renderMsdf*(sdf: Image; pxRange: float64; width, height: int; sdThreshold = 0.5): Image =
   let srcWidth = sdf.width
@@ -1690,6 +1858,32 @@ proc generateMsdfFromShape(shape: Shape; width, height: int; scale, translate: D
     range: range
   )
 
+proc generateMtsdfFromShape(shape: Shape; width, height: int; scale, translate: DVec2; pxRange: float64; overlapSupport: bool): MsdfGlyphResult =
+  let range = pxRange / min(scale.x, scale.y)
+  let mapping = initDistanceMapping(initRange(range))
+  let projection = initProjection(scale, translate)
+  let image = newImage(width, height)
+
+  for y in 0 ..< height:
+    let py = height.float64 - (y.float64 + 0.5)
+    for x in 0 ..< width:
+      let p = unproject(projection, dvec2(x.float64 + 0.5, py))
+      let dist = invertDistance(distanceForShapeMtsdf(shape, p, overlapSupport))
+      let r = mapDistance(mapping, dist.r)
+      let g = mapDistance(mapping, dist.g)
+      let b = mapDistance(mapping, dist.b)
+      let a = mapDistance(mapping, dist.a)
+      let color = rgba(toByte(r), toByte(g), toByte(b), toByte(a))
+      image.data[y * width + x] = color.rgbx()
+
+  MsdfGlyphResult(
+    image: image,
+    scale: scale.x,
+    translate: translate,
+    bounds: shapeBounds(shape),
+    range: range
+  )
+
 proc generateMsdfPath*(path: Path; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
   var shape = shapeFromPath(path)
   orientContours(shape)
@@ -1706,9 +1900,32 @@ proc generateMsdfPath*(path: Path; width, height: int; pxRange: float64; angleTh
   let (scale, translate) = makeProjection(bounds, width, height, pxRange)
   generateMsdfFromShape(shape, width, height, dvec2(scale, scale), translate, pxRange, overlapSupport)
 
+proc generateMtsdfPath*(path: Path; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
+  var shape = shapeFromPath(path)
+  orientContours(shape)
+  normalize(shape)
+  let bounds = shapeBounds(shape)
+  let probe = dvec2(
+    bounds.l - (bounds.r - bounds.l) - 1.0,
+    bounds.b - (bounds.t - bounds.b) - 1.0
+  )
+  if resolveDistance(distanceForShape(shape, probe, overlapSupport)) < 0:
+    for contour in shape.contours:
+      reverse(contour)
+  edgeColoringSimple(shape, angleThreshold, seed)
+  let (scale, translate) = makeProjection(bounds, width, height, pxRange)
+  generateMtsdfFromShape(shape, width, height, dvec2(scale, scale), translate, pxRange, overlapSupport)
+
 proc generateMsdfGlyph*(typeface: Typeface; rune: Rune; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
   let path = typeface.getGlyphPath(rune)
   generateMsdfPath(path, width, height, pxRange, angleThreshold, seed, overlapSupport)
 
+proc generateMtsdfGlyph*(typeface: Typeface; rune: Rune; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
+  let path = typeface.getGlyphPath(rune)
+  generateMtsdfPath(path, width, height, pxRange, angleThreshold, seed, overlapSupport)
+
 proc generateMsdfGlyph*(font: Font; rune: Rune; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
   generateMsdfGlyph(font.typeface, rune, width, height, pxRange, angleThreshold, seed, overlapSupport)
+
+proc generateMtsdfGlyph*(font: Font; rune: Rune; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
+  generateMtsdfGlyph(font.typeface, rune, width, height, pxRange, angleThreshold, seed, overlapSupport)

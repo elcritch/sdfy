@@ -265,14 +265,61 @@ func msdfSampleMedian*(image: Image; pos: Vec2; flipY: bool): float32 {.inline.}
   #py -= 0.5
   if flipY:
     py = (image.height.float32 - 1.0) - py
-  let sample = image.getRgbaSmooth(px, py)
-  #let sample = image[px.int, py.int]
+  let x0 = px.floor.int
+  let y0 = py.floor.int
+  let x1 = x0 + 1
+  let y1 = y0 + 1
+  let xf = px - px.floor
+  let yf = py - py.floor
+
   let inv = 1.0'f32 / 255.0'f32
-  median3(
-    sample.r.float32 * inv,
-    sample.g.float32 * inv,
-    sample.b.float32 * inv
-  )
+  let c00 = image[x0, y0]
+  let c10 = image[x1, y0]
+  let c01 = image[x0, y1]
+  let c11 = image[x1, y1]
+
+  let a00 = c00.a.float32 * inv
+  let a10 = c10.a.float32 * inv
+  let a01 = c01.a.float32 * inv
+  let a11 = c11.a.float32 * inv
+
+  let r00 = if a00 <= 0: 0.0'f32 else: clamp((c00.r.float32 * inv) / a00, 0.0'f32, 1.0'f32)
+  let g00 = if a00 <= 0: 0.0'f32 else: clamp((c00.g.float32 * inv) / a00, 0.0'f32, 1.0'f32)
+  let b00 = if a00 <= 0: 0.0'f32 else: clamp((c00.b.float32 * inv) / a00, 0.0'f32, 1.0'f32)
+  let r10 = if a10 <= 0: 0.0'f32 else: clamp((c10.r.float32 * inv) / a10, 0.0'f32, 1.0'f32)
+  let g10 = if a10 <= 0: 0.0'f32 else: clamp((c10.g.float32 * inv) / a10, 0.0'f32, 1.0'f32)
+  let b10 = if a10 <= 0: 0.0'f32 else: clamp((c10.b.float32 * inv) / a10, 0.0'f32, 1.0'f32)
+  let r01 = if a01 <= 0: 0.0'f32 else: clamp((c01.r.float32 * inv) / a01, 0.0'f32, 1.0'f32)
+  let g01 = if a01 <= 0: 0.0'f32 else: clamp((c01.g.float32 * inv) / a01, 0.0'f32, 1.0'f32)
+  let b01 = if a01 <= 0: 0.0'f32 else: clamp((c01.b.float32 * inv) / a01, 0.0'f32, 1.0'f32)
+  let r11 = if a11 <= 0: 0.0'f32 else: clamp((c11.r.float32 * inv) / a11, 0.0'f32, 1.0'f32)
+  let g11 = if a11 <= 0: 0.0'f32 else: clamp((c11.g.float32 * inv) / a11, 0.0'f32, 1.0'f32)
+  let b11 = if a11 <= 0: 0.0'f32 else: clamp((c11.b.float32 * inv) / a11, 0.0'f32, 1.0'f32)
+
+  let r = lerp(lerp(r00, r10, xf), lerp(r01, r11, xf), yf)
+  let g = lerp(lerp(g00, g10, xf), lerp(g01, g11, xf), yf)
+  let b = lerp(lerp(b00, b10, xf), lerp(b01, b11, xf), yf)
+  median3(r, g, b)
+
+func msdfSampleAlpha*(image: Image; pos: Vec2; flipY: bool): float32 {.inline.} =
+  var px = clamp(pos.x, 0.0, image.width.float32)
+  var py = clamp(pos.y, 0.0, image.height.float32)
+  if flipY:
+    py = (image.height.float32 - 1.0) - py
+  let x0 = px.floor.int
+  let y0 = py.floor.int
+  let x1 = x0 + 1
+  let y1 = y0 + 1
+  let xf = px - px.floor
+  let yf = py - py.floor
+
+  let inv = 1.0'f32 / 255.0'f32
+  let a00 = image[x0, y0].a.float32 * inv
+  let a10 = image[x1, y0].a.float32 * inv
+  let a01 = image[x0, y1].a.float32 * inv
+  let a11 = image[x1, y1].a.float32 * inv
+
+  lerp(lerp(a00, a10, xf), lerp(a01, a11, xf), yf)
 
 
 func sdMsdfBitmap*(p: Vec2; wh: Vec2; params: MsdfBitmapParams): float32 {.inline.} =
@@ -284,6 +331,11 @@ func sdMsdfBitmap*(p: Vec2; wh: Vec2; params: MsdfBitmapParams): float32 {.inlin
   let scaleX = imgW / w
   let scaleY = imgH / h
   let base = vec2(local.x * scaleX, local.y * scaleY)
-  let sd = msdfSampleMedian(params.image, base, params.flipY) - params.sdThreshold
+  let sd = (
+    if params.useAlpha:
+      msdfSampleAlpha(params.image, base, params.flipY)
+    else:
+      msdfSampleMedian(params.image, base, params.flipY)
+  ) - params.sdThreshold
   #let rangeScale = (w + h) / (imgW + imgH)
   -((params.pxRange * 1.0) * sd)

@@ -19,9 +19,43 @@ const
   msdfPxRange = 4.0
   msdfIconSize = 128
   starSvgPath = "tests/Yellow_Star_with_rounded_edges.svg"
+  meanDiffLimit = 0.002
 
 proc median(a, b, c: float64): float64 =
   max(min(a, b), min(max(a, b), c))
+
+proc diffImages(
+    expected, actual: Image, diffPath: string
+): tuple[mean: float64, max: float64] =
+  doAssert expected.width == actual.width
+  doAssert expected.height == actual.height
+
+  var total = 0.0
+  var maxDiff = 0.0
+  let count = expected.data.len
+  let diffImage = newImage(expected.width, expected.height)
+
+  for i in 0 ..< count:
+    let e = expected.data[i]
+    let a = actual.data[i]
+    let dr = abs(e.r.float64 - a.r.float64) / 255.0
+    let dg = abs(e.g.float64 - a.g.float64) / 255.0
+    let db = abs(e.b.float64 - a.b.float64) / 255.0
+    total += dr + dg + db
+    maxDiff = max(maxDiff, max(dr, max(dg, db)))
+
+    if diffPath.len > 0:
+      let diffColor = rgba(
+        uint8(round(dr * 255.0)),
+        uint8(round(dg * 255.0)),
+        uint8(round(db * 255.0)),
+        255,
+      )
+      diffImage.data[i] = diffColor.rgbx()
+
+  if diffPath.len > 0:
+    diffImage.writeFile(diffPath)
+  (total / (count.float64 * 3.0), maxDiff)
 
 proc verifyMsdf(typeface: Typeface, glyph: Rune, outputPath: string) =
   let result = generateMsdfGlyph(typeface, glyph, 64, 64, 4.0)
@@ -232,7 +266,7 @@ suite "msdf glyph":
     let (path, elementCount) = loadSvgPath(starSvgPath)
     doAssert elementCount > 0
     let glyphSize = msdfIconSize div 2
-    let glyph = generateMsdfPath(path, glyphSize, glyphSize, msdfPxRange)
+    let glyph = generateMtsdfPath(path, glyphSize, glyphSize, msdfPxRange)
 
     glyph.image.writeFile("tests/outputs/msdf_star_field.png")
 
@@ -243,6 +277,13 @@ suite "msdf glyph":
       pxRange: (glyph.range * glyph.scale).float32,
       sdThreshold: 0.5,
       flipY: true,
+    )
+    let shadowParams = MsdfBitmapParams(
+      image: glyph.image,
+      pxRange: (glyph.range * glyph.scale).float32,
+      sdThreshold: 0.5,
+      flipY: true,
+      useAlpha: true,
     )
     drawSdfShape(
       image,
@@ -267,11 +308,11 @@ suite "msdf glyph":
       shadowImage,
       largeCenter + shadowOffset,
       vec2(largeSize.float32, largeSize.float32),
-      params,
+      shadowParams,
       rgba(0, 0, 0, 255),
       rgba(0, 0, 0, 0),
       sdfModeDropShadow,
-      factor = 5,
+      factor = 1,
     )
 
     let starImage = newImage(largeSize, largeSize)
@@ -310,3 +351,16 @@ suite "msdf glyph":
       bgColor = rgba(0, 0, 0, 0),
     )
     blitLarge.writeFile("tests/outputs/msdf_star_icon_large_blitz.png")
+
+    let blitzCompare = newImage(largeSize, largeSize)
+    blitzCompare.fill(rgba(0, 0, 0, 255))
+    let ctxBlitz = newContext(blitzCompare)
+    ctxBlitz.drawImage(blitLarge, 0, 0)
+    blitzCompare.writeFile("tests/outputs/msdf_star_icon_large_blitz_compare.png")
+
+    let expectedStarPath = "tests/expected/msdf_star_icon_large_blitz.png"
+    doAssert fileExists(expectedStarPath)
+    let expectedStar = readImage(expectedStarPath)
+    let diffPath = "tests/outputs/msdf_star_icon_large_blitz_diff.png"
+    let (meanDiff, _) = diffImages(expectedStar, blitzCompare, diffPath)
+    check meanDiff <= meanDiffLimit
