@@ -443,9 +443,15 @@ This works, but as you can see isn't super high quality for small fonts. You wou
 
 ### Star Icon (SVG Path)
 
-For generic SVG paths, MSDF works rather well and scales very nicely. This star is generated at 32x32 and scales up to 512x512 nicely.
+For generic SVG paths, MSDF works rather well and scales very nicely.
 
 Note the shadow artifacts - the normal SDFModes for drop shadow and gaussian feathers don't work well with MSDF fields. It might be a matter of tweaking.
+
+This star is generated at 32x32 and scales up to 512x512 nicely:
+
+![MSDF Star BitField](tests/expected/msdf_star_field.png)
+
+Here's an example rendered output:
 
 ![MSDF Star Icon](tests/expected/msdf_star_icon_large.png)
 

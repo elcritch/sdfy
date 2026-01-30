@@ -234,6 +234,8 @@ suite "msdf glyph":
     let glyphSize = msdfIconSize div 2
     let glyph = generateMsdfPath(path, glyphSize, glyphSize, msdfPxRange)
 
+    glyph.image.writeFile("tests/outputs/msdf_star_field.png")
+
     ## medium star with shadow!
     let image = newImage(msdfIconSize, msdfIconSize)
     let params = MsdfBitmapParams(
