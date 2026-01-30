@@ -50,6 +50,18 @@ From this we get a good looking, if not perfect, drop shadow! There's a slight d
 - **Inset Shadow**: Inner shadow effects
 - **Inset Shadow Annular**: Annular inner shadow effects
 
+## MSDF (Multi-channel Signed Distance Fields)
+
+SDFY includes an MSDF generator for fonts and SVG paths plus helpers to render MSDF bitmaps.
+Use `generateMsdfGlyph` / `generateMsdfPath` from `sdfy/msdfgen`, then render with
+`renderMsdf`, `blitMsdfGlyph`, or `drawSdfShape` via `MsdfBitmapParams`.
+
+### Sample Font Output
+![MSDF Sample Font Output](tests/outputs/msdf_alnum_32.png)
+
+### Star Icon (SVG Path)
+![MSDF Star Icon](tests/outputs/msdf_star_icon.png)
+
 ## Performance
 
 | Mode | With SIMD | Without SIMD | Speedup |

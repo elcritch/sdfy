@@ -3,9 +3,6 @@ import pixie, vmath, pixie/simd
 
 import ./sdfytypes
 
-# Note these functions were adapted from https://iquilezles.org/articles/distfunctions2d/
-# under the MIT license.
-
 func sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   ## Signed distance function for a rounded box
   ## p: point to test
@@ -254,3 +251,39 @@ func sdRing*(p: Vec2, n: Vec2, r: float32, th: float32): float32 {.inline.} =
   
   # Return max(d1, d2)
   return max(d1, d2)
+
+# Note these functions were adapted from https://iquilezles.org/articles/distfunctions2d/
+# under the MIT license.
+
+func median3(a, b, c: float32): float32 {.inline.} =
+  max(min(a, b), min(max(a, b), c))
+
+func msdfSampleMedian*(image: Image; pos: Vec2; flipY: bool): float32 {.inline.} =
+  var px = clamp(pos.x, 0.0, image.width.float32)
+  var py = clamp(pos.y, 0.0, image.height.float32)
+  #px -= 0.5
+  #py -= 0.5
+  if flipY:
+    py = (image.height.float32 - 1.0) - py
+  let sample = image.getRgbaSmooth(px, py)
+  #let sample = image[px.int, py.int]
+  let inv = 1.0'f32 / 255.0'f32
+  median3(
+    sample.r.float32 * inv,
+    sample.g.float32 * inv,
+    sample.b.float32 * inv
+  )
+
+
+func sdMsdfBitmap*(p: Vec2; wh: Vec2; params: MsdfBitmapParams): float32 {.inline.} =
+  let w = max(wh.x, 1.0'f32)
+  let h = max(wh.y, 1.0'f32)
+  let imgW = params.image.width.float32
+  let imgH = params.image.height.float32
+  let local = p + wh * 0.5
+  let scaleX = imgW / w
+  let scaleY = imgH / h
+  let base = vec2(local.x * scaleX, local.y * scaleY)
+  let sd = msdfSampleMedian(params.image, base, params.flipY) - params.sdThreshold
+  #let rangeScale = (w + h) / (imgW + imgH)
+  -((params.pxRange * 1.0) * sd)

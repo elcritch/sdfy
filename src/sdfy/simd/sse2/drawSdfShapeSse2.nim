@@ -99,6 +99,15 @@ proc drawSdfShapeSse2*[I, T](
         sdBezierSimd(px_vec, py_vec, params.A.x, params.A.y, params.B.x, params.B.y, params.C.x, params.C.y)
       elif T is EllipseParams:
         sdEllipseSimd(px_vec, py_vec, params.ab.x, params.ab.y)
+      elif T is MsdfBitmapParams:
+        var sd_array: array[4, float32]
+        mm_storeu_ps(sd_array[0].addr, px_vec)
+        var py_values: array[4, float32]
+        mm_storeu_ps(py_values[0].addr, py_vec)
+        for i in 0 ..< remainingPixels:
+          let p = vec2(sd_array[i], py_values[i])
+          sd_array[i] = sdMsdfBitmap(p, wh, params)
+        mm_loadu_ps(sd_array[0].addr)
       else:
         {.error: "Unsupported shape parameter type in SSE2 implementation."}
       

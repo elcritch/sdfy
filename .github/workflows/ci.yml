@@ -1,42 +1,47 @@
-name: CI
-
 on:
   push:
-    branches: [ main, master, develop ]
+    branches:
+    - "main"
   pull_request:
-    branches: [ main, master, develop ]
+    branches:
+    - "*"
 
 jobs:
-  test:
+  tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        nim-version: ['stable']
-        exclude:
-          # Exclude some combinations to reduce CI time
-          - os: windows-latest
-            nim-version: devel
-          - os: macos-latest
-            nim-version: devel
-
+        nimversion:
+          - '2.2.6'
+        os:
+          - ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v1
 
-    - name: Setup Nim
-      uses: iffy/install-nim@v5
+    - uses: iffy/install-nim@v4
       with:
-        version: ${{ matrix.nim-version }}
+        version: ${{ matrix.nimversion }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Cache packages
+      uses: actions/cache@v3
+      with:
+        path: deps/
+        key: ${{ runner.os }}-${{ hashFiles('figdraw.nimble') }}
 
     - name: Install Atlas
       run: |
-        git clone https://github.com/nim-lang/atlas.git
-        cd atlas
-        nim buildRelease
-        cd ../
+        nimble install 'https://github.com/nim-lang/atlas@#head'
+        echo "Nim:: "
+        nim -v
+        echo "Atlas:: "
+        atlas -v
 
-    - name: Install dependencies
-      run: ./atlas/atlas install --feature:test
+    - name: Install Deps
+      run: |
+        atlas install --feature:test
 
-    - name: Run tests
-      run: nim test
+    - name: Build Tests
+      run: |
+        nim test
