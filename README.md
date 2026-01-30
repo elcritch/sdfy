@@ -435,7 +435,7 @@ Use `generateMsdfGlyph` / `generateMsdfPath` from `sdfy/msdfgen`, then render wi
 `renderMsdf`, `blitMsdfGlyph`, or `drawSdfShape` via `MsdfBitmapParams`.
 
 ### Sample Font Output
-![MSDF Sample Font Output](tests/expected/msdf_alnum_32.png)
+![MSDF Sample Font Output](tests/expected/msdf_alnum_draw_32.png)
 
 ### Star Icon (SVG Path)
 ![MSDF Star Icon](tests/expected/msdf_star_icon_large.png)
