@@ -19,6 +19,7 @@ const
   msdfPxRange = 4.0
   msdfIconSize = 128
   starSvgPath = "tests/Yellow_Star_with_rounded_edges.svg"
+  heartSvgPath = "data/heart-shape.svg"
   meanDiffLimit = 0.002
 
 proc median(a, b, c: float64): float64 =
@@ -364,3 +365,26 @@ suite "msdf glyph":
     let diffPath = "tests/outputs/msdf_star_icon_large_blitz_diff.png"
     let (meanDiff, _) = diffImages(expectedStar, blitzCompare, diffPath)
     check meanDiff <= meanDiffLimit
+
+  test "generate msdf and mtsdf from heart svg":
+    if not dirExists("tests/outputs"):
+      createDir("tests/outputs")
+
+    let (path, elementCount) = loadSvgPath(heartSvgPath)
+    doAssert elementCount > 0
+
+    let msdfGlyph = generateMsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+    let mtsdfGlyph = generateMtsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+
+    doAssert msdfGlyph.image.width == msdfIconSize
+    doAssert msdfGlyph.image.height == msdfIconSize
+    doAssert mtsdfGlyph.image.width == msdfIconSize
+    doAssert mtsdfGlyph.image.height == msdfIconSize
+
+    msdfGlyph.image.writeFile("tests/outputs/msdf_heart_field.png")
+    mtsdfGlyph.image.writeFile("tests/outputs/mtsdf_heart_field.png")
+
+    let msdfRendered = renderMsdf(msdfGlyph)
+    let mtsdfRendered = renderMsdf(mtsdfGlyph)
+    msdfRendered.writeFile("tests/outputs/msdf_heart_render.png")
+    mtsdfRendered.writeFile("tests/outputs/mtsdf_heart_render.png")
