@@ -388,3 +388,60 @@ suite "msdf glyph":
     let mtsdfRendered = renderMsdf(mtsdfGlyph)
     msdfRendered.writeFile("tests/outputs/msdf_heart_render.png")
     mtsdfRendered.writeFile("tests/outputs/mtsdf_heart_render.png")
+
+  test "render heart msdf and mtsdf strokes":
+    if not dirExists("tests/outputs"):
+      createDir("tests/outputs")
+
+    let (path, elementCount) = loadSvgPath(heartSvgPath)
+    doAssert elementCount > 0
+
+    let msdfGlyph = generateMsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+    let mtsdfGlyph = generateMtsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+
+    let size = msdfIconSize
+    let center = vec2(size.float32 / 2.0, size.float32 / 2.0)
+    let wh = vec2(size.float32, size.float32)
+
+    let msdfStroke = newImage(size, size)
+    msdfStroke.fill(rgba(0, 0, 0, 0))
+    let msdfParams = MsdfBitmapParams(
+      image: msdfGlyph.image,
+      pxRange: (msdfGlyph.range * msdfGlyph.scale).float32,
+      sdThreshold: 0.5,
+      flipY: true,
+    )
+    drawSdfShape(
+      msdfStroke,
+      center,
+      wh,
+      msdfParams,
+      rgba(220, 20, 60, 255),
+      rgba(0, 0, 0, 0),
+      sdfModeAnnularAA,
+      factor = 4,
+      pointOffset = vec2(0.0, 0.2),
+    )
+    msdfStroke.writeFile("tests/outputs/msdf_heart_stroke.png")
+
+    let mtsdfStroke = newImage(size, size)
+    mtsdfStroke.fill(rgba(0, 0, 0, 0))
+    let mtsdfParams = MsdfBitmapParams(
+      image: mtsdfGlyph.image,
+      pxRange: (mtsdfGlyph.range * mtsdfGlyph.scale).float32,
+      sdThreshold: 0.5,
+      flipY: true,
+      useAlpha: true,
+    )
+    drawSdfShape(
+      mtsdfStroke,
+      center,
+      wh,
+      mtsdfParams,
+      rgba(220, 20, 60, 255),
+      rgba(0, 0, 0, 0),
+      sdfModeAnnularAA,
+      factor = 4,
+      pointOffset = vec2(0.0, 0.2),
+    )
+    mtsdfStroke.writeFile("tests/outputs/mtsdf_heart_stroke.png")
