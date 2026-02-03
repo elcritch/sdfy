@@ -419,7 +419,7 @@ suite "msdf glyph":
       rgba(220, 20, 60, 255),
       rgba(0, 0, 0, 0),
       sdfModeAnnularAA,
-      factor = 4,
+      factor = 1.0,
       pointOffset = vec2(0.0, 0.2),
     )
     msdfStroke.writeFile("tests/outputs/msdf_heart_stroke.png")
@@ -441,7 +441,7 @@ suite "msdf glyph":
       rgba(220, 20, 60, 255),
       rgba(0, 0, 0, 0),
       sdfModeAnnularAA,
-      factor = 4,
+      factor = 1.0,
       pointOffset = vec2(0.0, 0.2),
     )
     mtsdfStroke.writeFile("tests/outputs/mtsdf_heart_stroke.png")
