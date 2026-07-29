@@ -20,10 +20,36 @@ const
   msdfIconSize = 128
   starSvgPath = "tests/Yellow_Star_with_rounded_edges.svg"
   heartSvgPath = "data/heart-shape.svg"
+  touchingArrowSvg =
+    """
+<svg width="128" height="128" viewBox="0 0 128 128">
+  <rect x="16" y="60" width="72" height="8" fill="black"/>
+  <polygon points="88,48 112,64 88,80" fill="black"/>
+</svg>
+"""
+  overlappingArrowSvg =
+    """
+<svg width="128" height="128" viewBox="0 0 128 128">
+  <rect x="16" y="60" width="80" height="8" fill="black"/>
+  <polygon points="88,48 112,64 88,80" fill="black"/>
+</svg>
+"""
   meanDiffLimit = 0.002
 
 proc median(a, b, c: float64): float64 =
   max(min(a, b), min(max(a, b), c))
+
+proc sampleShape(glyph: MsdfGlyphResult, x, y: float64): float64 =
+  let imageX = floor(glyph.scale * (x + glyph.translate.x)).int
+  let imageY = glyph.image.height - 1 - floor(glyph.scale * (y + glyph.translate.y)).int
+  let pixel = glyph.image[imageX, imageY]
+  median(pixel.r.float64 / 255.0, pixel.g.float64 / 255.0, pixel.b.float64 / 255.0)
+
+proc writeArrowOutputs(name: string, msdf, mtsdf: MsdfGlyphResult) =
+  msdf.image.writeFile(&"tests/outputs/msdf_{name}_field.png")
+  mtsdf.image.writeFile(&"tests/outputs/mtsdf_{name}_field.png")
+  renderMsdf(msdf).writeFile(&"tests/outputs/msdf_{name}_render.png")
+  renderMsdf(mtsdf).writeFile(&"tests/outputs/mtsdf_{name}_render.png")
 
 proc diffImages(
     expected, actual: Image, diffPath: string
@@ -388,6 +414,38 @@ suite "msdf glyph":
     let mtsdfRendered = renderMsdf(mtsdfGlyph)
     msdfRendered.writeFile("tests/outputs/msdf_heart_render.png")
     mtsdfRendered.writeFile("tests/outputs/mtsdf_heart_render.png")
+
+  test "overlapping SVG elements retain their union":
+    if not dirExists("tests/outputs"):
+      createDir("tests/outputs")
+
+    let (path, elementCount) = parseSvgPath(overlappingArrowSvg)
+    check elementCount == 2
+
+    let msdf = generateMsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+    let mtsdf = generateMtsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+
+    check sampleShape(msdf, 90.0, 64.0) > 0.5
+    check sampleShape(mtsdf, 90.0, 64.0) > 0.5
+
+    writeArrowOutputs("overlapping_arrow", msdf, mtsdf)
+
+  test "touching SVG elements remain connected":
+    if not dirExists("tests/outputs"):
+      createDir("tests/outputs")
+
+    let (path, elementCount) = parseSvgPath(touchingArrowSvg)
+    check elementCount == 2
+
+    let msdf = generateMsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+    let mtsdf = generateMtsdfPath(path, msdfIconSize, msdfIconSize, msdfPxRange)
+
+    for x in [87.0, 89.0]:
+      checkpoint "arrow sample x=" & $x
+      check sampleShape(msdf, x, 64.0) >= 0.5
+      check sampleShape(mtsdf, x, 64.0) >= 0.5
+
+    writeArrowOutputs("touching_arrow", msdf, mtsdf)
 
   test "render heart msdf and mtsdf strokes":
     if not dirExists("tests/outputs"):

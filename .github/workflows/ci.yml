@@ -21,6 +21,7 @@ jobs:
     - name: Install GrabNim
       run: |
         curl -fsSL https://codeberg.org/janAkali/grabnim/raw/branch/master/misc/install.sh | sh
+        "$HOME/.nimble/bin/grabnim" "${{ matrix.nimversion }}"
         echo "$HOME/.local/share/grabnim/current/bin" >> $GITHUB_PATH
         echo "$HOME/.nimble/bin" >> $GITHUB_PATH
 
@@ -28,11 +29,12 @@ jobs:
       uses: actions/cache@v3
       with:
         path: deps/
-        key: ${{ runner.os }}-${{ hashFiles('figdraw.nimble') }}
+        key: ${{ runner.os }}-${{ hashFiles('sdfy.nimble') }}
 
     - name: Install Atlas
       run: |
-        nimble install 'https://github.com/nim-lang/atlas@#head'
+        curl -fsSL https://raw.githubusercontent.com/nim-lang/atlas/0.14.10/install.sh | \
+          ATLAS_REF=0.14.10 ATLAS_INSTALL_DIR="$HOME/.nimble/bin" bash -
         echo "Nim:: "
         nim -v
         echo "Atlas:: "
