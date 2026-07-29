@@ -1886,7 +1886,10 @@ proc generateMtsdfFromShape(shape: Shape; width, height: int; scale, translate: 
 
 proc generateMsdfPath*(path: Path; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
   var shape = shapeFromPath(path)
-  orientContours(shape)
+  # Overlap support relies on intersecting contours retaining the same winding.
+  # The orientation heuristic can mistake them for nested contours and reverse one.
+  if not overlapSupport:
+    orientContours(shape)
   normalize(shape)
   let bounds = shapeBounds(shape)
   let probe = dvec2(
@@ -1902,7 +1905,10 @@ proc generateMsdfPath*(path: Path; width, height: int; pxRange: float64; angleTh
 
 proc generateMtsdfPath*(path: Path; width, height: int; pxRange: float64; angleThreshold = 3.0; seed: uint64 = 0; overlapSupport = true): MsdfGlyphResult {.raises: [PixieError].} =
   var shape = shapeFromPath(path)
-  orientContours(shape)
+  # Overlap support relies on intersecting contours retaining the same winding.
+  # The orientation heuristic can mistake them for nested contours and reverse one.
+  if not overlapSupport:
+    orientContours(shape)
   normalize(shape)
   let bounds = shapeBounds(shape)
   let probe = dvec2(
