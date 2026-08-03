@@ -1393,10 +1393,114 @@ proc hasNumber(path: string; idx: int): bool =
   path[i].isDigit or path[i] == '-' or path[i] == '+' or path[i] == '.'
 
 proc isCommandChar(c: char): bool =
-  c in {'M', 'm', 'L', 'l', 'H', 'h', 'V', 'v', 'C', 'c', 'S', 's', 'Q', 'q', 'T', 't', 'Z', 'z'}
+  c in {
+    'M', 'm', 'L', 'l', 'H', 'h', 'V', 'v', 'C', 'c', 'S', 's', 'Q', 'q',
+    'T', 't', 'A', 'a', 'Z', 'z',
+  }
 
-proc shapeFromPath(path: Path): Shape {.raises: [PixieError].} =
-  let pathStr = $path
+proc addSvgArc(
+    contour: Contour,
+    startPoint: DVec2,
+    rx, ry, rotation: float64,
+    largeArc, sweep: bool,
+    endPoint: DVec2,
+) =
+  if startPoint == endPoint:
+    return
+
+  var radii = dvec2(abs(rx), abs(ry))
+  if radii.x == 0 or radii.y == 0:
+    contour.addEdge(newLine(startPoint, endPoint))
+    return
+
+  let
+    phi = rotation * PI / 180.0
+    cosPhi = cos(phi)
+    sinPhi = sin(phi)
+    halfDelta = (startPoint - endPoint) / 2
+    transformedStart = dvec2(
+      cosPhi * halfDelta.x + sinPhi * halfDelta.y,
+      -sinPhi * halfDelta.x + cosPhi * halfDelta.y,
+    )
+
+  var radiiSquared = dvec2(radii.x * radii.x, radii.y * radii.y)
+  let
+    startSquared = dvec2(
+      transformedStart.x * transformedStart.x,
+      transformedStart.y * transformedStart.y,
+    )
+    radiiScale =
+      startSquared.x / radiiSquared.x + startSquared.y / radiiSquared.y
+  if radiiScale > 1:
+    radii = radii * sqrt(radiiScale)
+    radiiSquared = dvec2(radii.x * radii.x, radii.y * radii.y)
+
+  let
+    denominator = radiiSquared.x * startSquared.y +
+      radiiSquared.y * startSquared.x
+    numerator = radiiSquared.x * radiiSquared.y - denominator
+    sign = if largeArc == sweep: -1.0 else: 1.0
+    centerScale = sign * sqrt(max(0.0, numerator / denominator))
+    transformedCenter = dvec2(
+      centerScale * radii.x * transformedStart.y / radii.y,
+      -centerScale * radii.y * transformedStart.x / radii.x,
+    )
+    midpoint = (startPoint + endPoint) / 2
+    center = dvec2(
+      cosPhi * transformedCenter.x - sinPhi * transformedCenter.y + midpoint.x,
+      sinPhi * transformedCenter.x + cosPhi * transformedCenter.y + midpoint.y,
+    )
+    startVector = dvec2(
+      (transformedStart.x - transformedCenter.x) / radii.x,
+      (transformedStart.y - transformedCenter.y) / radii.y,
+    )
+    endVector = dvec2(
+      (-transformedStart.x - transformedCenter.x) / radii.x,
+      (-transformedStart.y - transformedCenter.y) / radii.y,
+    )
+    startAngle = arctan2(startVector.y, startVector.x)
+
+  var sweepAngle = arctan2(
+    cross(startVector, endVector), dot(startVector, endVector)
+  )
+  if sweep and sweepAngle < 0:
+    sweepAngle += 2 * PI
+  elif not sweep and sweepAngle > 0:
+    sweepAngle -= 2 * PI
+
+  let
+    segmentCount = max(1, ceil(abs(sweepAngle) / (PI / 2)).int)
+    segmentAngle = sweepAngle / segmentCount.float64
+
+  proc pointAt(angle: float64): DVec2 =
+    let point = dvec2(radii.x * cos(angle), radii.y * sin(angle))
+    dvec2(
+      cosPhi * point.x - sinPhi * point.y + center.x,
+      sinPhi * point.x + cosPhi * point.y + center.y,
+    )
+
+  proc derivativeAt(angle: float64): DVec2 =
+    let derivative = dvec2(-radii.x * sin(angle), radii.y * cos(angle))
+    dvec2(
+      cosPhi * derivative.x - sinPhi * derivative.y,
+      sinPhi * derivative.x + cosPhi * derivative.y,
+    )
+
+  var edgeStart = startPoint
+  for segment in 0 ..< segmentCount:
+    let
+      angleStart = startAngle + segment.float64 * segmentAngle
+      angleEnd = angleStart + segmentAngle
+      cubicScale = 4.0 / 3.0 * tan(segmentAngle / 4.0)
+      control1 = edgeStart + derivativeAt(angleStart) * cubicScale
+      edgeEnd =
+        if segment == segmentCount - 1: endPoint
+        else: pointAt(angleEnd)
+      control2 = edgeEnd - derivativeAt(angleEnd) * cubicScale
+    contour.addEdge(newCubic(edgeStart, control1, control2, edgeEnd))
+    edgeStart = edgeEnd
+
+proc shapeFromPathString(pathStr: string): Shape {.raises: [PixieError].} =
   var shape = newShape()
   var contour = newContour()
   var idx = 0
@@ -1417,12 +1521,15 @@ proc shapeFromPath(path: Path): Shape {.raises: [PixieError].} =
       inc idx
     if idx >= pathStr.len:
       break
+    let iterationStart = idx
     var cmd = lastCmd
     if isCommandChar(pathStr[idx]):
       cmd = pathStr[idx]
       inc idx
     if cmd == '\0':
-      break
+      raise newException(
+        PixieError, "Unsupported path command: " & $pathStr[idx]
+      )
 
     let isRel = cmd.isLowerAscii
     let upCmd = cmd.toUpperAscii
@@ -1430,6 +1537,10 @@ proc shapeFromPath(path: Path): Shape {.raises: [PixieError].} =
     case upCmd
     of 'M':
       if not hasNumber(pathStr, idx):
+        if idx <= iterationStart:
+          raise newException(
+            PixieError, "Unsupported path command: " & $pathStr[idx]
+          )
         continue
       finishContour(true)
       let x = parseNumber(pathStr, idx)
@@ -1544,6 +1655,32 @@ proc shapeFromPath(path: Path): Shape {.raises: [PixieError].} =
         current = p2
         lastCtrl = p1
       lastCmd = cmd
+    of 'A':
+      while hasNumber(pathStr, idx):
+        let
+          rx = parseNumber(pathStr, idx)
+          ry = parseNumber(pathStr, idx)
+          rotation = parseNumber(pathStr, idx)
+          largeArcValue = parseNumber(pathStr, idx)
+          sweepValue = parseNumber(pathStr, idx)
+          x = parseNumber(pathStr, idx)
+          y = parseNumber(pathStr, idx)
+        if largeArcValue notin [0.0, 1.0] or sweepValue notin [0.0, 1.0]:
+          raise newException(PixieError, "Invalid path arc flag")
+        var next = dvec2(x, y)
+        if isRel:
+          next = next + current
+        contour.addSvgArc(
+          current,
+          rx,
+          ry,
+          rotation,
+          largeArcValue == 1,
+          sweepValue == 1,
+          next,
+        )
+        current = next
+      lastCmd = cmd
     of 'Z':
       if current != start:
         contour.addEdge(newLine(current, start))
@@ -1553,8 +1690,16 @@ proc shapeFromPath(path: Path): Shape {.raises: [PixieError].} =
     else:
       lastCmd = cmd
 
+    if idx <= iterationStart:
+      raise newException(
+        PixieError, "Unsupported path command: " & $pathStr[idx]
+      )
+
   finishContour(true)
   shape
+
+proc shapeFromPath(path: Path): Shape {.raises: [PixieError].} =
+  shapeFromPathString($path)
 
 
 proc toByte(value: float64): uint8 =
