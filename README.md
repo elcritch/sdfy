@@ -293,6 +293,75 @@ corner handling. Batches on straight edges skip the corner calculation.
 ARM64 uses hardware vector square roots and division; ARM32 uses vector
 reciprocal estimates with Newton refinement.
 
+### Rendering directly into spans
+
+`sdfy/spans` renders into a borrowed `var openArray[ColorRGBX]`. It evaluates
+affine coordinates, rounded-box distances, paint, coverage, masks, and
+premultiplied blending in four-pixel SSE2/NEON packets. Scalar tails handle
+arbitrary span lengths without reading past the end. `-d:sdfyNoSimd` disables
+SIMD globally; `useSimd = false` selects the scalar reference per call.
+
+```nim
+import chroma, pixie, vmath
+import sdfy/spans
+
+let image = newImage(257, 193)
+let field = initRoundedBoxField(
+  vec2(100, 65), vec4(20), vec4(10), center = vec2(128, 96))
+let paint = initLinearPaint(
+  rgba(220, 40, 80, 180), rgba(20, 160, 240, 220),
+  origin = vec2(28, 31), axis = vec2(200, 0))
+let effect = initSpanEffect(aaWidth = 1)
+
+for y in 0 ..< image.height:
+  let first = y * image.width
+  drawRoundedBoxSpan(
+    image.data.toOpenArray(first, first + image.width - 1), field,
+    initSpanCoordinates(vec2(0.5, y.float32 + 0.5'f32)), paint, effect)
+
+# Convenience wrapper over the same span renderer:
+drawRoundedBox(image, field, paint, effect = effect)
+```
+
+Prepare fields and paints once per shape. `initRoundedBoxField` supports both
+circular and elliptical quadrant radii; equal effective axes use the dedicated
+circular kernel. `distance` and `distances` expose scalar and four-point field
+sampling for applications that supply their own image sampler or shader.
+
+Paints interpolate straight RGBA channels in byte space before coverage and
+premultiplication. `initLinearPaint` takes the gradient's start position and
+start-to-end axis vector; an overload adds a middle stop and its position.
+`initBilinearPaint` takes corners in TL, TR, BR, BL order. Integer channel
+premultiplication, mask multiplication, and blending use exact rounded division
+by 255. SIMD gradients and Gaussian shadows can differ from scalar results by
+one channel value at rounding boundaries; the vector Gaussian uses range
+reduction and a polynomial approximation.
+
+`initSpanCoordinates` maps `origin + index * step` through a finite affine
+matrix into local coordinates. Shape centers, gradient positions, inset
+offsets, and `initSpanClip` bounds all use this local space. Clips include their
+lower bounds and exclude their upper bounds. `initSpanEffect` selects fill,
+stroke, antialiased stroke, drop shadow, or inset shadow; it clamps positive AA
+widths to at least `1e-5` and rejects invalid widths. Circular and elliptical
+radius clamping follows `sdEllipticalRoundedBox` semantics.
+
+An optional mask is either an `openArray[uint8]` or an
+`openArray[ColorRGBX]` whose alpha is read. A nonempty mask must match the
+destination length; a mismatch raises `ValueError` before writing pixels.
+`sbOver` composites covered, masked source over the destination. `sbReplace`
+interpolates source and destination using the mask, including destination alpha.
+The caller owns all storage; no view is retained and no temporary image is
+created. Identical mask/destination views are supported, while shifted
+overlapping views are unsupported.
+
+The image wrapper accepts an optional same-sized mask and a local-to-image
+transform, sampling pixel centers at half-pixel offsets. It considers every
+image pixel unless a local clip excludes it, so applications with their own
+bounding-box traversal should call the span API on the affected rows directly.
+
+Run `nim r -d:release tests/bench_spans.nim` to compare the complete scalar and
+SIMD span pipelines.
+
 ### Shape Parameters
 
 ```nim

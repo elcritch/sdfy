@@ -1,6 +1,7 @@
 --nimcache:".nimcache"
 
 task test, "Run tests":
+  exec "nim c -r tests/test_spans.nim"
   exec "nim c -r tests/test_rounded_box_simd.nim"
   exec "nim c -r tests/test_elliptical_rounded_box.nim"
   exec "nim c -r tests/test1.nim"
