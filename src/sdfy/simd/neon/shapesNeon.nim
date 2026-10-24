@@ -173,17 +173,9 @@ proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {
     max_qy_sq = vmulq_f32(max_qy, max_qy)
     length_sq = vaddq_f32(max_qx_sq, max_qy_sq)
   
-  # sqrt approximation using vsqrtq_f32 (available in ARMv8)
-  when defined(arm64) or defined(aarch64):
-    let length_vec = vsqrtq_f32(length_sq)
-  else:
-    # Fallback for older ARM processors
-    var length_array: array[4, float32]
-    vst1q_f32(length_array[0].addr, length_sq)
-    for i in 0..3:
-      length_array[i] = sqrt(length_array[i])
-    let length_vec = vld1q_f32(length_array[0].addr)
-  
+  # Hardware vector square roots on ARM64; vector Newton refinement on ARM32.
+  let length_vec = sqrt4(length_sq)
+
   # min(max(q.x, q.y), 0.0) + length - cornerRadius
   let
     max_q = vmaxq_f32(qx, qy)

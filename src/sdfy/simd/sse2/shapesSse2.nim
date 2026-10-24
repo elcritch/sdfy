@@ -118,14 +118,12 @@ proc sdRoundedBoxSimd*(px, py: M128, bx, by: float32, r: Vec4): M128 {.inline, r
   # cornerRadius.x = if p.y > 0.0: cornerRadius.x else: cornerRadius.y
   let corner_radius = mm_or_ps(mm_and_ps(py_pos, radius_x), mm_andnot_ps(py_pos, radius_y))
   
-  # Calculate abs(p) - we need to compute absolute value manually in SSE2
-  # abs(x) = max(x, -x)
+  # Clear each sign bit to get absolute values in one instruction per vector.
   let
-    neg_px = mm_sub_ps(zero, px)
-    neg_py = mm_sub_ps(zero, py)
-    abs_px = mm_max_ps(px, neg_px)
-    abs_py = mm_max_ps(py, neg_py)
-  
+    signMask = mm_set1_ps(-0.0'f32)
+    abs_px = mm_andnot_ps(signMask, px)
+    abs_py = mm_andnot_ps(signMask, py)
+
   # Calculate q = abs(p) - b + vec2(cornerRadius.x, cornerRadius.x)
   let
     qx = mm_add_ps(mm_sub_ps(abs_px, bx_vec), corner_radius)

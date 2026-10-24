@@ -160,6 +160,10 @@ image.writeFile("output.png")
 
 Calculate the signed distance from a point to a rounded rectangle.
 
+Corners are circular, with one radius per corner. The SIMD implementations
+evaluate four distances per call on SSE2 and NEON. ARM64 uses hardware vector
+square roots; ARM32 uses vector reciprocal-square-root refinement.
+
 - `p`: Point to test
 - `b`: Box half-extents (width/2, height/2)  
 - `r`: Corner radii as Vec4 (x=top-right, y=bottom-right, z=bottom-left, w=top-left)
