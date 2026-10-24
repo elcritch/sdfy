@@ -283,8 +283,11 @@ field, with their shared radius clamped to the smaller half-extent. Elliptical
 corners use the same first-order distance approximation as FigDraw's shaders:
 the outline is exact, while distances away from it, including stroke widths and
 shadow falloff, are approximate. Existing clip, stroke, and shadow raster modes
-all accept the new parameters. SSE2 and NEON currently evaluate the distance per
-lane and retain SIMD effect/color processing.
+all accept the parameters. SSE2 and NEON evaluate four distances in SIMD
+registers, including quadrant selection, clamping, and circular/elliptical
+corner handling. Batches on straight edges skip the corner calculation.
+ARM64 uses hardware vector square roots and division; ARM32 uses vector
+reciprocal estimates with Newton refinement.
 
 ### Shape Parameters
 

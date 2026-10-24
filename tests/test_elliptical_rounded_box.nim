@@ -1,4 +1,4 @@
-import std/[math, unittest]
+import std/[math, random, unittest]
 
 import pixie, vmath
 import sdfy
@@ -6,7 +6,86 @@ import sdfy
 proc closeTo(a, b: float32): bool =
   abs(a - b) < 0.00002'f32
 
+when allowSimd:
+  when defined(amd64):
+    import nimsimd/sse2
+    proc distances(
+        xs, ys: var array[4, float32], bounds: Vec2, rx, ry: Vec4
+    ): array[4, float32] =
+      let value = sdEllipticalRoundedBoxSimd(
+        mm_loadu_ps(xs[0].addr), mm_loadu_ps(ys[0].addr), bounds.x, bounds.y, rx, ry
+      )
+      mm_storeu_ps(result[0].addr, value)
+
+  elif defined(arm64) or defined(aarch64) or defined(arm):
+    import nimsimd/neon
+    proc distances(
+        xs, ys: var array[4, float32], bounds: Vec2, rx, ry: Vec4
+    ): array[4, float32] =
+      let value = sdEllipticalRoundedBoxSimd(
+        vld1q_f32(xs[0].addr), vld1q_f32(ys[0].addr), bounds.x, bounds.y, rx, ry
+      )
+      vst1q_f32(result[0].addr, value)
+
 suite "Elliptical rounded boxes":
+  when allowSimd:
+    test "SIMD lanes preserve mixed circular elliptical and sharp corners":
+      for bounds in [vec2(10, 8), vec2(0, 8), vec2(0, 0), vec2(-3, 8)]:
+        for axes in [
+          (vec4(2, 0, 40, 6), vec4(2, 3, 40, 3)),
+          (vec4(40, -2, 0, 7), vec4(30, 5, -4, 7)),
+          (vec4(0.001, 3, 4, 5), vec4(6, 0.002, 8, 2)),
+        ]:
+          for y in -12 .. 12:
+            for x in countup(-16, 16, 4):
+              var xs = [x.float32, (x + 1).float32, (x + 2).float32, (x + 3).float32]
+              var ys =
+                [y.float32, -y.float32, y.float32 + 0.25'f32, -y.float32 - 0.5'f32]
+              let actual = distances(xs, ys, bounds, axes[0], axes[1])
+              for lane in 0 ..< 4:
+                let expected = sdEllipticalRoundedBox(
+                  vec2(xs[lane], ys[lane]), bounds, axes[0], axes[1]
+                )
+                check classify(actual[lane]) notin {fcNan, fcInf, fcNegInf}
+                check abs(actual[lane] - expected) <=
+                  0.00002'f32 + abs(expected) * 0.000002'f32
+
+    test "SIMD agrees with scalar on deterministic randomized fields":
+      var rng = initRand(48193)
+      for trial in 0 ..< 2000:
+        let bounds = vec2(rand(rng, 50.0).float32, rand(rng, 50.0).float32)
+        var rx, ry: Vec4
+        var xs, ys: array[4, float32]
+        for lane in 0 ..< 4:
+          rx[lane] = rand(rng, 90.0).float32 - 10
+          ry[lane] =
+            if trial mod 3 == 0:
+              rx[lane]
+            else:
+              rand(rng, 90.0).float32 - 10
+          xs[lane] = rand(rng, 160.0).float32 - 80
+          ys[lane] = rand(rng, 160.0).float32 - 80
+        let actual = distances(xs, ys, bounds, rx, ry)
+        for lane in 0 ..< 4:
+          let expected =
+            sdEllipticalRoundedBox(vec2(xs[lane], ys[lane]), bounds, rx, ry)
+          check classify(actual[lane]) notin {fcNan, fcInf, fcNegInf}
+          check abs(actual[lane] - expected) <=
+            0.00002'f32 + abs(expected) * 0.000002'f32
+
+    test "SIMD preserves the near-center epsilon branch and quadrant boundaries":
+      var xs = [0'f32, -0'f32, 1e-9'f32, 2e-9'f32]
+      var ys = [0'f32, 1e-9'f32, 0'f32, 2e-9'f32]
+      let bounds = vec2(0.006, 0.003)
+      let actual = distances(xs, ys, bounds, vec4(0.006), vec4(0.003))
+      for lane in 0 ..< 4:
+        check closeTo(
+          actual[lane],
+          sdEllipticalRoundedBox(
+            vec2(xs[lane], ys[lane]), bounds, vec4(0.006), vec4(0.003)
+          ),
+        )
+
   test "equal axes retain the circular distance field":
     let
       bounds = vec2(10, 8)
