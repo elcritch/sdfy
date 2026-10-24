@@ -20,6 +20,47 @@ func sdRoundedBox*(p: Vec2, b: Vec2, r: Vec4): float32 {.inline.} =
   
   result = min(max(q.x, q.y), 0.0) + length(max(q, vec2(0.0, 0.0))) - cornerRadius.x
 
+func cornerRadius(r: Vec4, p: Vec2): float32 {.inline.} =
+  if p.x > 0.0'f32:
+    if p.y > 0.0'f32: r.x else: r.y
+  else:
+    if p.y > 0.0'f32: r.z else: r.w
+
+func sdEllipticalRoundedBox*(p, b: Vec2, rx, ry: Vec4): float32 {.inline.} =
+  ## Approximate signed distance to a box with elliptical corners.
+  ## `b` contains the box half-extents. `rx` and `ry` contain horizontal and
+  ## vertical radii in quadrant order (+x,+y), (+x,-y), (-x,+y), (-x,-y).
+  ## Each axis is clamped to its half-extent; either zero axis makes a sharp
+  ## corner. Equal axes reproduce `sdRoundedBox` with the clamped radius.
+  ## The ellipse uses a first-order distance approximation, matching FigDraw's
+  ## shader field. Its zero contour is exact, but distances away from the
+  ## contour are approximate (including stroke widths and shadow falloff).
+  let
+    bounds = max(b, vec2(0.0'f32))
+    radiusX = cornerRadius(rx, p)
+    radiusY = cornerRadius(ry, p)
+    radii = vec2(
+      clamp(radiusX, 0.0'f32, bounds.x),
+      clamp(radiusY, 0.0'f32, bounds.y),
+    )
+  if radiusX == radiusY:
+    return sdRoundedBox(p, bounds, vec4(clamp(radiusX, 0.0'f32, min(bounds.x, bounds.y))))
+  if radii.x <= 0.0'f32 or radii.y <= 0.0'f32:
+    let q = abs(p) - bounds
+    return min(max(q.x, q.y), 0.0'f32) + length(max(q, vec2(0.0'f32)))
+  if radii.x == radii.y:
+    return sdRoundedBox(p, bounds, vec4(radii.x))
+
+  let q = abs(p) - bounds + radii
+  if q.x > 0.0'f32 and q.y > 0.0'f32:
+    let
+      k0 = length(q / radii)
+      k1 = length(q / (radii * radii))
+    if k0 <= 0.000001'f32:
+      return -min(radii.x, radii.y)
+    return k0 * (k0 - 1.0'f32) / max(k1, 0.000001'f32)
+  max(q.x - radii.x, q.y - radii.y)
+
 func sdChamferBox*(p: Vec2, b: Vec2, chamfer: float32): float32 {.inline.} =
   ## Signed distance function for a chamfered box
   ## p: point to test

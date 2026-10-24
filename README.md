@@ -27,6 +27,7 @@ From this we get a good looking, if not perfect, drop shadow! There's a slight d
 ## Supported Shapes
 
 - **Rounded Rectangle**: Fully configurable rounded rectangles with independent corner radii
+- **Elliptical Rounded Rectangle**: Independent horizontal and vertical radii at every corner
 - **Chamfer Box**: Rectangles with chamfered (cut) corners
 - **Circle**: Perfect circles with configurable radius
 - **Box**: Simple rectangles/boxes with sharp corners
@@ -257,6 +258,33 @@ Generic function to render shapes to an image using SDF.
 - `factor`: Anti-aliasing factor (default: 4.0)
 - `spread`: Spread amount for shadow effects (default: 0.0)
 - `mode`: Rendering mode (see SDFMode enum)
+
+### Elliptical rounded rectangles
+
+Use `EllipticalRoundedBoxParams(rx: Vec4, ry: Vec4)` with `drawSdfShape`, or
+call `sdEllipticalRoundedBox(p, halfExtents, rx, ry)` directly. Both vectors use
+the same quadrant order as the circular distance function: `(+x,+y)`,
+`(+x,-y)`, `(-x,+y)`, `(-x,-y)`. With image coordinates (+y down), that is
+bottom-right, top-right, bottom-left, top-left.
+
+```nim
+let image = newImage(160, 100)
+drawSdfShape(image,
+  center = vec2(80, 50), wh = vec2(140, 80),
+  params = EllipticalRoundedBoxParams(
+    rx: vec4(30, 20, 10, 25), ry: vec4(10, 15, 20, 8)),
+  pos = rgba(40, 120, 220, 255), neg = rgba(0, 0, 0, 0),
+  mode = sdfModeClipAA)
+```
+
+Each radius is clamped to its corresponding box half-extent. A corner is sharp
+when either axis is zero or negative. Equal input axes use the existing circular
+field, with their shared radius clamped to the smaller half-extent. Elliptical
+corners use the same first-order distance approximation as FigDraw's shaders:
+the outline is exact, while distances away from it, including stroke widths and
+shadow falloff, are approximate. Existing clip, stroke, and shadow raster modes
+all accept the new parameters. SSE2 and NEON currently evaluate the distance per
+lane and retain SIMD effect/color processing.
 
 ### Shape Parameters
 

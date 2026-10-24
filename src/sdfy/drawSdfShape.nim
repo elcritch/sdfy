@@ -47,6 +47,8 @@ proc drawSdfShapeImpl*[I, T](
         when T is RoundedBoxParams:
           let b = wh / 2.0
           sdRoundedBox(p, b, params.r)
+        elif T is EllipticalRoundedBoxParams:
+          sdEllipticalRoundedBox(p, wh / 2.0'f32, params.rx, params.ry)
         elif T is ChamferBoxParams:
           let b = wh / 2.0
           sdChamferBox(p, b, params.chamfer)
