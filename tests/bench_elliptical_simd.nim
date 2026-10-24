@@ -1,5 +1,5 @@
 ## nim r -d:release tests/bench_elliptical_simd.nim
-## Compares the vector distance function to the former four-scalar-lane path.
+## Compares direct scalar, former scalar-lane SIMD, and full vector distances.
 import std/[math, monotimes, strformat, times]
 import vmath
 import sdfy
@@ -37,7 +37,12 @@ elif defined(arm64) or defined(aarch64) or defined(arm):
 else:
   {.error: "This benchmark requires SSE2 or NEON".}
 
-const Repetitions {.intdefine.} = 100
+const Repetitions {.intdefine.} = 1000
+type BenchmarkMode = enum
+  scalar
+  previousSimd
+  newSimd
+
 const BatchCount = 4096
 
 proc scalarLanes(px, py: Vector, bounds: Vec2, rx, ry: Vec4): Vector {.inline.} =
@@ -49,26 +54,37 @@ proc scalarLanes(px, py: Vector, bounds: Vec2, rx, ry: Vec4): Vector {.inline.} 
   load(output[0].addr)
 
 proc measure(
-    vectorized: static bool,
+    mode: static BenchmarkMode,
     xs, ys: var seq[array[4, float32]],
     bounds: Vec2,
     rx, ry: Vec4,
 ): tuple[seconds: float64, checksum: float32] =
   var total = zero()
+  var scalarTotals: array[4, float32]
   let start = getMonoTime()
   for iteration in 0 ..< Repetitions:
     for batch in 0 ..< xs.len:
-      let px = load(xs[batch][0].addr)
-      let py = load(ys[batch][0].addr)
-      let distance =
-        when vectorized:
-          sdEllipticalRoundedBoxSimd(px, py, bounds.x, bounds.y, rx, ry)
-        else:
-          scalarLanes(px, py, bounds, rx, ry)
-      total = add(total, distance)
+      when mode == scalar:
+        for lane in 0 ..< 4:
+          scalarTotals[lane] +=
+            sdEllipticalRoundedBox(
+              vec2(xs[batch][lane], ys[batch][lane]), bounds, rx, ry
+            )
+      else:
+        let px = load(xs[batch][0].addr)
+        let py = load(ys[batch][0].addr)
+        let distance =
+          when mode == newSimd:
+            sdEllipticalRoundedBoxSimd(px, py, bounds.x, bounds.y, rx, ry)
+          else:
+            scalarLanes(px, py, bounds, rx, ry)
+        total = add(total, distance)
   result.seconds = (getMonoTime() - start).inNanoseconds.float64 / 1e9
   var lanes: array[4, float32]
-  store(lanes[0].addr, total)
+  when mode == scalar:
+    lanes = scalarTotals
+  else:
+    store(lanes[0].addr, total)
   for lane in lanes:
     result.checksum += lane
 
@@ -100,12 +116,15 @@ for scenario in [
       else:
         xs[batch][lane] = (index mod 128).float32 - 64
         ys[batch][lane] = (batch mod 96).float32 - 48
-  var scalarSeconds, vectorSeconds = Inf
+  var scalarSeconds, previousSeconds, vectorSeconds = Inf
   for trial in 0 ..< 5:
-    let scalar = measure(false, xs, ys, bounds, rx, ry)
-    let vector = measure(true, xs, ys, bounds, rx, ry)
-    doAssert abs(scalar.checksum - vector.checksum) <=
-      max(1'f32, abs(scalar.checksum)) * 0.00001'f32
-    scalarSeconds = min(scalarSeconds, scalar.seconds)
+    let direct = measure(scalar, xs, ys, bounds, rx, ry)
+    let previous = measure(previousSimd, xs, ys, bounds, rx, ry)
+    let vector = measure(newSimd, xs, ys, bounds, rx, ry)
+    for checksum in [previous.checksum, vector.checksum]:
+      doAssert abs(direct.checksum - checksum) <=
+        max(1'f32, abs(direct.checksum)) * 0.00001'f32
+    scalarSeconds = min(scalarSeconds, direct.seconds)
+    previousSeconds = min(previousSeconds, previous.seconds)
     vectorSeconds = min(vectorSeconds, vector.seconds)
-  echo &"{scenario}: scalar lanes {scalarSeconds*1000:.2f} ms, SIMD {vectorSeconds*1000:.2f} ms, {scalarSeconds/vectorSeconds:.2f}x"
+  echo &"{scenario}: scalar {scalarSeconds*1000:.2f} ms, previous SIMD {previousSeconds*1000:.2f} ms, new SIMD {vectorSeconds*1000:.2f} ms, {previousSeconds/vectorSeconds:.2f}x vs previous"
