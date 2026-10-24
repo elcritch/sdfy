@@ -10,6 +10,17 @@ when defined(release):
 
 import ./shapesNeon
 
+proc sdEllipticalRoundedBoxSimd*(
+    px, py: float32x4, bx, by: float32, rx, ry: Vec4
+): float32x4 {.inline, raises: [].} =
+  ## Processes elliptical corners per lane while reusing SIMD color/effect code.
+  var xs, ys, distances: array[4, float32]
+  vst1q_f32(xs[0].addr, px)
+  vst1q_f32(ys[0].addr, py)
+  for i in 0..<4:
+    distances[i] = sdEllipticalRoundedBox(vec2(xs[i], ys[i]), vec2(bx, by), rx, ry)
+  vld1q_f32(distances[0].addr)
+
 proc sdBezierSimd*(px, py: float32x4, Ax, Ay, Bx, By, Cx, Cy: float32): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for quadratic Bézier curve
   ## Processes 4 pixels at once

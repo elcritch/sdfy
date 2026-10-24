@@ -29,6 +29,14 @@ type
   RoundedBoxParams* = object
     ## Parameters for rounded box SDF
     r*: Vec4  ## corner radii as Vec4 (x=top-right, y=bottom-right, z=bottom-left, w=top-left)
+
+  EllipticalRoundedBoxParams* = object
+    ## Independent horizontal and vertical corner radii, in pixels.
+    ## Vec4 components select quadrants: (+x,+y), (+x,-y), (-x,+y), (-x,-y).
+    ## In image coordinates (+y down), these are BR, TR, BL, TL.
+    ## Radii are clamped to the corresponding box half-extent. A corner with
+    ## either radius <= 0 is sharp. Equal axes retain the circular box field.
+    rx*, ry*: Vec4
   
   ChamferBoxParams* = object
     ## Parameters for chamfer box SDF

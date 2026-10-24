@@ -78,6 +78,10 @@ proc drawSdfShapeSse2*[I, T](
           b_x = wh.x / 2.0
           b_y = wh.y / 2.0
         sdRoundedBoxSimd(px_vec, py_vec, b_x, b_y, params.r)
+      elif T is EllipticalRoundedBoxParams:
+        sdEllipticalRoundedBoxSimd(
+          px_vec, py_vec, wh.x / 2.0'f32, wh.y / 2.0'f32, params.rx, params.ry
+        )
       elif T is ChamferBoxParams:
         let
           b_x = wh.x / 2.0

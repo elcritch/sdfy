@@ -10,6 +10,17 @@ import ./shapesSse2
 when defined(release):
   {.push checks: off.}
 
+proc sdEllipticalRoundedBoxSimd*(
+    px, py: M128, bx, by: float32, rx, ry: Vec4
+): M128 {.inline, raises: [].} =
+  ## Processes elliptical corners per lane while reusing SIMD color/effect code.
+  var xs, ys, distances: array[4, float32]
+  mm_storeu_ps(xs[0].addr, px)
+  mm_storeu_ps(ys[0].addr, py)
+  for i in 0..<4:
+    distances[i] = sdEllipticalRoundedBox(vec2(xs[i], ys[i]), vec2(bx, by), rx, ry)
+  mm_loadu_ps(distances[0].addr)
+
 proc sdBezierSimd*(px, py: M128, Ax, Ay, Bx, By, Cx, Cy: float32): M128 {.inline, raises: [].} =
   ## SSE2 SIMD version of signed distance function for quadratic Bézier curve
   ## Processes 4 pixels at once
