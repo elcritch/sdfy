@@ -17,6 +17,118 @@ when not compiles(vcvtq_u32_f32(float32x4(0.0))):
 when not compiles(vnegq_f32(float32x4(0.0))):
   func vnegq_f32(a: float32x4): float32x4 {.header: "arm_neon.h".}
 
+when defined(arm64) or defined(aarch64):
+  proc sqrt4(value: float32x4): float32x4 {.inline, raises: [].} =
+    vsqrtq_f32(value)
+
+  proc divide4(a, b: float32x4): float32x4 {.inline, raises: [].} =
+    vdivq_f32(a, b)
+
+  proc anyLane(mask: uint32x4): bool {.inline, raises: [].} =
+    vmaxvq_u32(mask) != 0
+
+  proc everyLane(mask: uint32x4): bool {.inline, raises: [].} =
+    vminvq_u32(mask) == high(uint32)
+
+else:
+  func vrecpeq_f32(a: float32x4): float32x4 {.importc, header: "arm_neon.h".}
+  func vrecpsq_f32(a, b: float32x4): float32x4 {.importc, header: "arm_neon.h".}
+  func vrsqrteq_f32(a: float32x4): float32x4 {.importc, header: "arm_neon.h".}
+  func vrsqrtsq_f32(a, b: float32x4): float32x4 {.importc, header: "arm_neon.h".}
+
+  proc divide4(a, b: float32x4): float32x4 {.inline, raises: [].} =
+    var reciprocal = vrecpeq_f32(b)
+    for i in 0 ..< 3:
+      reciprocal = vmulq_f32(reciprocal, vrecpsq_f32(b, reciprocal))
+    vmulq_f32(a, reciprocal)
+
+  proc sqrt4(value: float32x4): float32x4 {.inline, raises: [].} =
+    let safe = vbslq_f32(vcgtq_f32(value, vmovq_n_f32(0)), value, vmovq_n_f32(1))
+    var reciprocal = vrsqrteq_f32(safe)
+    for i in 0 ..< 3:
+      reciprocal =
+        vmulq_f32(reciprocal, vrsqrtsq_f32(vmulq_f32(safe, reciprocal), reciprocal))
+    vmulq_f32(value, reciprocal)
+
+  proc anyLane(mask: uint32x4): bool {.inline, raises: [].} =
+    let halves = vorr_u32(vget_low_u32(mask), vget_high_u32(mask))
+    (vget_lane_u32(halves, 0) or vget_lane_u32(halves, 1)) != 0
+
+  proc everyLane(mask: uint32x4): bool {.inline, raises: [].} =
+    let halves = vand_u32(vget_low_u32(mask), vget_high_u32(mask))
+    (vget_lane_u32(halves, 0) and vget_lane_u32(halves, 1)) == high(uint32)
+
+proc sdEllipticalRoundedBoxSimd*(
+    px, py: float32x4, bx, by: float32, rx, ry: Vec4
+): float32x4 {.inline, raises: [].} =
+  ## Evaluates four distances in NEON registers, including mixed corner kinds.
+  let
+    zero = vmovq_n_f32(0.0'f32)
+    one = vmovq_n_f32(1.0'f32)
+    epsilon = vmovq_n_f32(0.000001'f32)
+    boundsX = vmovq_n_f32(max(bx, 0.0'f32))
+    boundsY = vmovq_n_f32(max(by, 0.0'f32))
+    positiveX = vcgtq_f32(px, zero)
+    positiveY = vcgtq_f32(py, zero)
+    rawX = vbslq_f32(
+      positiveY,
+      vbslq_f32(positiveX, vmovq_n_f32(rx.x), vmovq_n_f32(rx.z)),
+      vbslq_f32(positiveX, vmovq_n_f32(rx.y), vmovq_n_f32(rx.w)),
+    )
+    rawY = vbslq_f32(
+      positiveY,
+      vbslq_f32(positiveX, vmovq_n_f32(ry.x), vmovq_n_f32(ry.z)),
+      vbslq_f32(positiveX, vmovq_n_f32(ry.y), vmovq_n_f32(ry.w)),
+    )
+    equalInputs = vceqq_f32(rawX, rawY)
+    sharedRadius = vminq_f32(vmaxq_f32(rawX, zero), vminq_f32(boundsX, boundsY))
+    clampedX =
+      vbslq_f32(equalInputs, sharedRadius, vminq_f32(vmaxq_f32(rawX, zero), boundsX))
+    clampedY =
+      vbslq_f32(equalInputs, sharedRadius, vminq_f32(vmaxq_f32(rawY, zero), boundsY))
+    rounded = vandq_u32(vcgtq_f32(clampedX, zero), vcgtq_f32(clampedY, zero))
+    radiusX = vbslq_f32(rounded, clampedX, zero)
+    radiusY = vbslq_f32(rounded, clampedY, zero)
+    qx = vaddq_f32(vsubq_f32(vabsq_f32(px), boundsX), radiusX)
+    qy = vaddq_f32(vsubq_f32(vabsq_f32(py), boundsY), radiusY)
+    straight = vmaxq_f32(vsubq_f32(qx, radiusX), vsubq_f32(qy, radiusY))
+    corner = vandq_u32(vcgtq_f32(qx, zero), vcgtq_f32(qy, zero))
+  if not anyLane(corner):
+    return straight
+
+  let
+    outsideX = vmaxq_f32(qx, zero)
+    outsideY = vmaxq_f32(qy, zero)
+    circular = vsubq_f32(
+      vaddq_f32(
+        vminq_f32(vmaxq_f32(qx, qy), zero),
+        sqrt4(vaddq_f32(vmulq_f32(outsideX, outsideX), vmulq_f32(outsideY, outsideY))),
+      ),
+      radiusX,
+    )
+    equalAxes = vceqq_f32(radiusX, radiusY)
+  if everyLane(equalAxes):
+    return circular
+
+  let
+    active = vandq_u32(vmvnq_u32(equalAxes), corner)
+    safeX = vbslq_f32(active, radiusX, one)
+    safeY = vbslq_f32(active, radiusY, one)
+    activeX = vbslq_f32(active, qx, zero)
+    activeY = vbslq_f32(active, qy, zero)
+    ux = divide4(activeX, safeX)
+    uy = divide4(activeY, safeY)
+    vx = divide4(activeX, vmulq_f32(safeX, safeX))
+    vy = divide4(activeY, vmulq_f32(safeY, safeY))
+    k0 = sqrt4(vaddq_f32(vmulq_f32(ux, ux), vmulq_f32(uy, uy)))
+    k1 = sqrt4(vaddq_f32(vmulq_f32(vx, vx), vmulq_f32(vy, vy)))
+    ellipse = vbslq_f32(
+      vcleq_f32(k0, epsilon),
+      vnegq_f32(vminq_f32(radiusX, radiusY)),
+      divide4(vmulq_f32(k0, vsubq_f32(k0, one)), vmaxq_f32(k1, epsilon)),
+    )
+  vbslq_f32(equalAxes, circular, vbslq_f32(corner, ellipse, straight))
+
 proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {.inline, raises: [].} =
   ## SIMD version of signed distance function for rounded box
   ## Processes 4 pixels at once
@@ -61,17 +173,9 @@ proc sdRoundedBoxSimd*(px, py: float32x4, bx, by: float32, r: Vec4): float32x4 {
     max_qy_sq = vmulq_f32(max_qy, max_qy)
     length_sq = vaddq_f32(max_qx_sq, max_qy_sq)
   
-  # sqrt approximation using vsqrtq_f32 (available in ARMv8)
-  when defined(arm64) or defined(aarch64):
-    let length_vec = vsqrtq_f32(length_sq)
-  else:
-    # Fallback for older ARM processors
-    var length_array: array[4, float32]
-    vst1q_f32(length_array[0].addr, length_sq)
-    for i in 0..3:
-      length_array[i] = sqrt(length_array[i])
-    let length_vec = vld1q_f32(length_array[0].addr)
-  
+  # Hardware vector square roots on ARM64; vector Newton refinement on ARM32.
+  let length_vec = sqrt4(length_sq)
+
   # min(max(q.x, q.y), 0.0) + length - cornerRadius
   let
     max_q = vmaxq_f32(qx, qy)

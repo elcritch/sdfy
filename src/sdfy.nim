@@ -6,6 +6,7 @@ import sdfy/sdfytypes
 import sdfy/simd/shapesSimd
 import sdfy/shapes
 import sdfy/drawSdfShape
+import sdfy/spans
 import sdfy/msdfgen
 import sdfy/msdfgenSvg
 
@@ -13,5 +14,6 @@ export sdfytypes
 export shapesSimd
 export shapes
 export drawSdfShape
+export spans
 export msdfgen
 export msdfgenSvg

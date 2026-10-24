@@ -8,6 +8,86 @@ import ../../shapes
 when defined(release):
   {.push checks: off.}
 
+proc select(mask, a, b: M128): M128 {.inline, raises: [].} =
+  mm_or_ps(mm_and_ps(mask, a), mm_andnot_ps(mask, b))
+
+proc sdEllipticalRoundedBoxSimd*(
+    px, py: M128, bx, by: float32, rx, ry: Vec4
+): M128 {.inline, raises: [].} =
+  ## Evaluates four distances in SSE2 registers, including mixed corner kinds.
+  let
+    zero = mm_setzero_ps()
+    one = mm_set1_ps(1.0'f32)
+    epsilon = mm_set1_ps(0.000001'f32)
+    boundsX = mm_set1_ps(max(bx, 0.0'f32))
+    boundsY = mm_set1_ps(max(by, 0.0'f32))
+    positiveX = mm_cmpgt_ps(px, zero)
+    positiveY = mm_cmpgt_ps(py, zero)
+    rawX = select(
+      positiveY,
+      select(positiveX, mm_set1_ps(rx.x), mm_set1_ps(rx.z)),
+      select(positiveX, mm_set1_ps(rx.y), mm_set1_ps(rx.w)),
+    )
+    rawY = select(
+      positiveY,
+      select(positiveX, mm_set1_ps(ry.x), mm_set1_ps(ry.z)),
+      select(positiveX, mm_set1_ps(ry.y), mm_set1_ps(ry.w)),
+    )
+    equalInputs = mm_cmpeq_ps(rawX, rawY)
+    sharedRadius = mm_min_ps(mm_max_ps(rawX, zero), mm_min_ps(boundsX, boundsY))
+    clampedX =
+      select(equalInputs, sharedRadius, mm_min_ps(mm_max_ps(rawX, zero), boundsX))
+    clampedY =
+      select(equalInputs, sharedRadius, mm_min_ps(mm_max_ps(rawY, zero), boundsY))
+    rounded = mm_and_ps(mm_cmpgt_ps(clampedX, zero), mm_cmpgt_ps(clampedY, zero))
+    radiusX = mm_and_ps(rounded, clampedX)
+    radiusY = mm_and_ps(rounded, clampedY)
+    absX = mm_max_ps(px, mm_sub_ps(zero, px))
+    absY = mm_max_ps(py, mm_sub_ps(zero, py))
+    qx = mm_add_ps(mm_sub_ps(absX, boundsX), radiusX)
+    qy = mm_add_ps(mm_sub_ps(absY, boundsY), radiusY)
+    straight = mm_max_ps(mm_sub_ps(qx, radiusX), mm_sub_ps(qy, radiusY))
+    corner = mm_and_ps(mm_cmpgt_ps(qx, zero), mm_cmpgt_ps(qy, zero))
+  if mm_movemask_ps(corner) == 0:
+    return straight
+
+  let
+    outsideX = mm_max_ps(qx, zero)
+    outsideY = mm_max_ps(qy, zero)
+    circular = mm_sub_ps(
+      mm_add_ps(
+        mm_min_ps(mm_max_ps(qx, qy), zero),
+        mm_sqrt_ps(
+          mm_add_ps(mm_mul_ps(outsideX, outsideX), mm_mul_ps(outsideY, outsideY))
+        ),
+      ),
+      radiusX,
+    )
+    equalAxes = mm_cmpeq_ps(radiusX, radiusY)
+  if mm_movemask_ps(equalAxes) == 15:
+    return circular
+
+  # Mask inactive circular/straight lanes before division, so their tiny or
+  # zero radii cannot raise floating-point errors in a discarded result.
+  let
+    active = mm_andnot_ps(equalAxes, corner)
+    safeX = select(active, radiusX, one)
+    safeY = select(active, radiusY, one)
+    activeX = mm_and_ps(active, qx)
+    activeY = mm_and_ps(active, qy)
+    ux = mm_div_ps(activeX, safeX)
+    uy = mm_div_ps(activeY, safeY)
+    vx = mm_div_ps(activeX, mm_mul_ps(safeX, safeX))
+    vy = mm_div_ps(activeY, mm_mul_ps(safeY, safeY))
+    k0 = mm_sqrt_ps(mm_add_ps(mm_mul_ps(ux, ux), mm_mul_ps(uy, uy)))
+    k1 = mm_sqrt_ps(mm_add_ps(mm_mul_ps(vx, vx), mm_mul_ps(vy, vy)))
+    ellipse = select(
+      mm_cmple_ps(k0, epsilon),
+      mm_sub_ps(zero, mm_min_ps(radiusX, radiusY)),
+      mm_div_ps(mm_mul_ps(k0, mm_sub_ps(k0, one)), mm_max_ps(k1, epsilon)),
+    )
+  select(equalAxes, circular, select(corner, ellipse, straight))
+
 proc sdRoundedBoxSimd*(px, py: M128, bx, by: float32, r: Vec4): M128 {.inline, raises: [].} =
   ## SSE2 SIMD version of signed distance function for rounded box
   ## Processes 4 pixels at once
@@ -38,14 +118,12 @@ proc sdRoundedBoxSimd*(px, py: M128, bx, by: float32, r: Vec4): M128 {.inline, r
   # cornerRadius.x = if p.y > 0.0: cornerRadius.x else: cornerRadius.y
   let corner_radius = mm_or_ps(mm_and_ps(py_pos, radius_x), mm_andnot_ps(py_pos, radius_y))
   
-  # Calculate abs(p) - we need to compute absolute value manually in SSE2
-  # abs(x) = max(x, -x)
+  # Clear each sign bit to get absolute values in one instruction per vector.
   let
-    neg_px = mm_sub_ps(zero, px)
-    neg_py = mm_sub_ps(zero, py)
-    abs_px = mm_max_ps(px, neg_px)
-    abs_py = mm_max_ps(py, neg_py)
-  
+    signMask = mm_set1_ps(-0.0'f32)
+    abs_px = mm_andnot_ps(signMask, px)
+    abs_py = mm_andnot_ps(signMask, py)
+
   # Calculate q = abs(p) - b + vec2(cornerRadius.x, cornerRadius.x)
   let
     qx = mm_add_ps(mm_sub_ps(abs_px, bx_vec), corner_radius)
